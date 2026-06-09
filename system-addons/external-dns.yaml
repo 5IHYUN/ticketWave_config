@@ -1,0 +1,38 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: external-dns
+  namespace: argocd
+
+spec:
+  project: default
+
+  source:
+    repoURL: https://kubernetes-sigs.github.io/external-dns
+    chart: external-dns
+    targetRevision: 1.15.0
+
+    helm:
+      values: |
+        provider: aws
+
+        policy: sync
+
+        registry: txt
+
+        txtOwnerId: team5-ticketing
+
+        domainFilters:
+          - ticketing.team5.com
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: external-dns
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+
+    syncOptions:
+      - CreateNamespace=true

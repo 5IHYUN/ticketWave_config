@@ -1,0 +1,8 @@
+resources:
+  - aws-load-balancer-controller.yaml
+  - external-secrets.yaml
+  - external-dns.yaml
+  - keda.yaml
+  - kube-prometheus-stack.yaml
+  - namespaces.yaml
+  - storageclass.yaml
