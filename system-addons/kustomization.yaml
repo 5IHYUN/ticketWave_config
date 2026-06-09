@@ -1,4 +1,5 @@
 resources:
+  - namespaces.yaml
   - aws-load-balancer-controller.yaml
   - external-secrets.yaml
   - keda.yaml
