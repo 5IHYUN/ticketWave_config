@@ -1,0 +1,21 @@
+# Spring Boot Actuator(/actuator/prometheus) 메트릭 scrape 등록.
+# kube-prometheus-stack의 serviceMonitorSelectorNilUsesHelmValues:false 덕분에
+# 모든 네임스페이스의 ServiceMonitor를 Prometheus가 자동 발견 -> ticketing에 둬도 인식됨.
+#
+# ⚠️ 전제(앱 매니페스트 아직 없음 -> 워커/서비스 추가 시 맞춰야 함):
+#   - 의존성 micrometer-registry-prometheus
+#   - management.endpoints.web.exposure.include: health,prometheus
+#   - booking Service에 selector용 label + named port 존재
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: booking
+  namespace: ticketing
+spec:
+  selector:
+    matchLabels:
+      app: booking                 # ← 실제 booking Service의 label로 치환
+  endpoints:
+    - port: http                   # ← Service의 named port로 치환
+      path: /actuator/prometheus
+      interval: 15s
