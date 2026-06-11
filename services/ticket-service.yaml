@@ -8,8 +8,8 @@ spec:
 
   source:
     repoURL: https://github.com/CLD-05/team5-ticket-config.git
-    targetRevision: main
-    path: env/dev/ticket-service
+    targetRevision: develop
+    path: envs/dev/ticket-service
 
   destination:
     server: https://kubernetes.default.svc
