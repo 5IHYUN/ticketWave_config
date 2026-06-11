@@ -7,3 +7,4 @@ resources:
   - namespaces.yaml
   - storageclass.yaml
   - yace.yaml
+  - cluster-autoscaler.yaml
