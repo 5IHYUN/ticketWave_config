@@ -14,11 +14,12 @@ spec:
   project: default
 
   source:
-    repoURL: https://nerdswords.github.io/helm-charts
-    chart: yet-another-cloudwatch-exporter
-    targetRevision: 0.65.0            # ← 최신 버전으로 확인 후 조정
+    repoURL: https://prometheus-community.github.io/helm-charts
+    chart: prometheus-yet-another-cloudwatch-exporter
+    targetRevision: 0.45.0            # ← 최신 버전으로 확인 후 조정
     helm:
       values: |
+        nameOverride: yet-another-cloudwatch-exporter
         serviceAccount:
           create: true
           name: yace                  # terraform var.yace_service_account 와 일치
