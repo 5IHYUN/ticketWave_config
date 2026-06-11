@@ -62,7 +62,7 @@ spec:
         # Prometheus UI에서 aws_sqs_ 메트릭의 라벨(dimension_QueueName 등) 한 번 확인 후 맞출 것.
         - alert: BookingQueueBacklogHigh
           expr: |
-            max(aws_sqs_approximate_number_of_messages_visible_maximum{dimension_QueueName="booking-queue"}) > 500
+            max(aws_sqs_approximate_number_of_messages_visible_maximum{dimension_QueueName="team5-dev-booking-queue"}) > 500
           for: 3m
           labels:
             severity: warning
