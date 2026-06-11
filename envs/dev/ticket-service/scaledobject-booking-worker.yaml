@@ -23,7 +23,7 @@ spec:
     - type: aws-sqs-queue
       metadata:
         # queueURL / awsRegion 은 sqs 모듈 output 기준으로 치환
-        queueURL: "https://sqs.ap-northeast-2.amazonaws.com/123456789012/booking-queue"  # ← 치환
+        queueURL: "https://sqs.ap-northeast-2.amazonaws.com/194722398200/booking-queue"  # ← 치환
         awsRegion: "ap-northeast-2"          # ← 치환
         queueLength: "5"                     # Pod당 목표 메시지 수 (부하테스트 시나리오2로 튜닝)
         activationQueueLength: "1"           # 0→1 스케일 임계 (min 0일 때 의미)
