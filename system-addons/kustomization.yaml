@@ -8,3 +8,4 @@ resources:
   - storageclass.yaml
   - yace.yaml
   - cluster-autoscaler.yaml
+  - clustersecretstore.yaml

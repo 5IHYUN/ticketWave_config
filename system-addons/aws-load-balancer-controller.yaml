@@ -12,7 +12,7 @@ spec:
     targetRevision: 1.8.1
     helm:
       values: |
-        clusterName: team5-ticket-eks
+        clusterName: team5-dev-eks
         region: ap-northeast-2
         serviceAccount:
           create: true
