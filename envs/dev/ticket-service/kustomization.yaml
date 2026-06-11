@@ -3,8 +3,20 @@
 # 현재 repo에 비어있음(워커/서비스 Deployment 미존재). 워커 매니페스트가 추가되면
 # 아래 resources에 함께 등록.
 resources:
-  # - deployment-booking-worker.yaml   # ← 워커 Deployment (앱 팀/본인이 추가)
-  # - service-booking.yaml             # ← booking Service (ServiceMonitor 대상)
+  # Application manifests. CI/CD updates the image tag in the images section.
+  - serviceaccount.yaml
+  - externalsecret.yaml
+  - deployment.yaml
+  - service.yaml
+  - ingress.yaml
+
+  # Observability / autoscaling manifests added by the observability owner.
+  # Keep these resources registered so Prometheus/KEDA settings are not dropped.
   - scaledobject-booking-worker.yaml
   - servicemonitor-booking.yaml
   - prometheusrule-booking.yaml
+
+images:
+  - name: ticket-service
+    newName: 194722398200.dkr.ecr.ap-northeast-2.amazonaws.com/team5-dev-app
+    newTag: dev-placeholder
