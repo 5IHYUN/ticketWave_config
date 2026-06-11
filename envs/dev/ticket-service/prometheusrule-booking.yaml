@@ -1,0 +1,72 @@
+# booking 도메인 알림 규칙.
+# 즉시 동작하는 규칙(Actuator 기본 메트릭)과 앱 계측 후 동작하는 규칙을 구분.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: booking-slo
+  namespace: ticketing             # ruleSelectorNilUsesHelmValues:false 로 전 네임스페이스 발견됨
+spec:
+  groups:
+    - name: booking.rules
+      rules:
+        # [즉시 동작] 동기 API 5xx 오류율 > 5%
+        # 주의: 좌석 충돌 409는 4xx라 여기 안 잡힘 (의도된 동시성 거절 = 정상)
+        - alert: BookingHighErrorRate
+          expr: |
+            sum(rate(http_server_requests_seconds_count{status=~"5.."}[5m]))
+            /
+            sum(rate(http_server_requests_seconds_count[5m])) > 0.05
+          for: 2m
+          labels:
+            severity: warning
+            team: team5
+          annotations:
+            summary: "booking 5xx 오류율 5% 초과"
+            description: "현재 오류율 {{ $value | humanizePercentage }}"
+
+        # [즉시 동작] 동기 API p99 지연 > 1s
+        - alert: BookingHighLatency
+          expr: |
+            histogram_quantile(0.99,
+              sum(rate(http_server_requests_seconds_bucket[5m])) by (le)) > 1
+          for: 5m
+          labels:
+            severity: warning
+            team: team5
+          annotations:
+            summary: "booking API p99 지연 1s 초과"
+            description: "현재 p99 {{ $value }}s"
+
+        # [앱 계측 후 동작] 예매 확정 성공률 SLO(99%) 위반
+        # booking_confirm_total{result="confirmed|failed"} 메트릭이 Worker에 있어야 함
+        # (SLO 문서 4-2의 Micrometer 계측 참고). 계측 전엔 시계열이 없어 발동 안 함.
+        # 분모에서 conflict(동시성 정상 거절) 제외 → confirmed/(confirmed+failed)
+        # conflict는 의도된 거절이라 실패율에 넣으면 SLO가 왜곡됨 (k6 부하 시 다수 발생)
+        - alert: BookingConfirmSLOBreach
+          expr: |
+            (
+              sum(rate(booking_confirm_total{result="confirmed"}[5m]))
+              /
+              sum(rate(booking_confirm_total{result=~"confirmed|failed"}[5m]))
+            ) < 0.99
+          for: 5m
+          labels:
+            severity: critical
+            team: team5
+          annotations:
+            summary: "예매 확정 성공률 SLO(99%) 위반"
+            description: "현재 성공률 {{ $value | humanizePercentage }}"
+
+        # [YACE 도입 후 동작] booking-queue 적체 과다
+        # YACE가 노출하는 메트릭/라벨 기준. 실제 라벨명은 YACE 버전에 따라 다를 수 있어
+        # Prometheus UI에서 aws_sqs_ 메트릭의 라벨(dimension_QueueName 등) 한 번 확인 후 맞출 것.
+        - alert: BookingQueueBacklogHigh
+          expr: |
+            max(aws_sqs_approximate_number_of_messages_visible_maximum{dimension_QueueName="booking-queue"}) > 500
+          for: 3m
+          labels:
+            severity: warning
+            team: team5
+          annotations:
+            summary: "booking-queue 적체 500 초과"
+            description: "현재 적체 {{ $value }}건 — KEDA 스케일이 못 따라가는지 확인"
