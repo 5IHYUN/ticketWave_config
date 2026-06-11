@@ -28,3 +28,4 @@ spec:
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
+      - ServerSideApply=true  # Large CRD 처리를 위해 추가
