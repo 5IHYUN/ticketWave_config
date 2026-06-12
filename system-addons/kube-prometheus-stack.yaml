@@ -24,6 +24,9 @@ spec:
       values: |
         grafana:
           enabled: true
+          grafana.ini:
+            security:
+              allow_embedding: true
           persistence:
             enabled: true
             storageClassName: gp3

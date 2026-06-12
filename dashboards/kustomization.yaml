@@ -14,6 +14,7 @@ configMapGenerator:
       - team5-overview.json
       - team5-sync.json
       - team5-system.json
+      - team5-unified.json
     options:
       labels:
         grafana_dashboard: "1"
