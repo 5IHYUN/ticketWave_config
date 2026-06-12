@@ -23,7 +23,7 @@ spec:
             annotations:
               # ⚠️ terraform apply output cluster_autoscaler_irsa_role_arn 값으로 치환
               #    (= arn:aws:iam::194722398200:role/team5-ticket-dev-cluster-autoscaler 예상)
-              eks.amazonaws.com/role-arn: arn:aws:iam::194722398200:role/team5-ticket-dev-cluster-autoscaler
+              eks.amazonaws.com/role-arn: arn:aws:iam::194722398200:role/team5-dev-cluster-autoscaler
 
         extraArgs:
           # 노드 비면 빨리 정리(기본 10분 → 데모/테스트용으로 단축)

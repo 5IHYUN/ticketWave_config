@@ -10,6 +10,12 @@ spec:
     repoURL: https://kedacore.github.io/charts
     chart: keda
     targetRevision: 2.15.1
+    helm:
+      values: |
+        serviceAccount:
+          operator:
+            annotations:
+              eks.amazonaws.com/role-arn: arn:aws:iam::194722398200:role/team5-ticket-dev-keda-sqs
 
   destination:
     server: https://kubernetes.default.svc
