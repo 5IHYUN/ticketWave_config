@@ -23,4 +23,4 @@ resources:
 images:
   - name: ticket-service
     newName: 194722398200.dkr.ecr.ap-northeast-2.amazonaws.com/team5-dev-app
-    newTag: dev-17ec185
+    newTag: dev-caa63f2
