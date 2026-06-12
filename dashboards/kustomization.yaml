@@ -12,7 +12,8 @@ configMapGenerator:
   - name: team5-grafana-dashboards
     files:
       - team5-overview.json
-      # - team5-loadtest.json   # 부하테스트 전용 대시보드 추가 시 여기에
+      - team5-sync.json
+      - team5-system.json
     options:
       labels:
         grafana_dashboard: "1"
