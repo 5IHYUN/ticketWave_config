@@ -28,6 +28,16 @@ spec:
             enabled: true
             storageClassName: gp3
             size: 5Gi
+          ingress:
+            enabled: true
+            ingressClassName: alb
+            annotations:
+              alb.ingress.kubernetes.io/scheme: internet-facing
+              alb.ingress.kubernetes.io/target-type: ip
+              alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80}]'
+              alb.ingress.kubernetes.io/healthcheck-path: /api/health
+            path: /
+            pathType: Prefix
           # adminPassword 는 ESO로 주입 권장 (평문 금지)
         prometheus:
           prometheusSpec:
