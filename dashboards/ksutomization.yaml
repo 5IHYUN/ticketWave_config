@@ -1,0 +1,23 @@
+# Grafana 대시보드를 ConfigMap으로 변환해 monitoring 네임스페이스에 배치한다.
+# kube-prometheus-stack의 Grafana 사이드카가 grafana_dashboard:"1" 라벨이 붙은
+# ConfigMap을 자동 임포트 → Grafana에 대시보드로 뜬다 (UI 임포트/재기동 불필요).
+#
+# 대시보드를 추가하려면 *.json 파일을 이 디렉토리에 두고 아래 files: 에 한 줄 추가.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: monitoring
+
+configMapGenerator:
+  - name: team5-grafana-dashboards
+    files:
+      - team5-overview.json
+      # - team5-loadtest.json   # 부하테스트 전용 대시보드 추가 시 여기에
+    options:
+      labels:
+        grafana_dashboard: "1"
+
+# JSON 내용이 바뀌어도 ConfigMap 이름이 안 바뀌게(해시 접미사 비활성).
+# 사이드카가 같은 이름 ConfigMap의 변경을 감지해 대시보드를 갱신한다.
+generatorOptions:
+  disableNameSuffixHash: true
