@@ -10,7 +10,7 @@ spec:
   type: ClusterIP
   clusterIP: None                      # headless (LB 불필요, 메트릭 scrape 전용)
   selector:
-    app.kubernetes.io/name: team5-dev-booking-worker
+    app.kubernetes.io/name: booking-worker   # ← deployment-booking-worker 파드 라벨과 일치 (기존 team5-dev-booking-worker는 불일치라 endpoints 0개였음)
   ports:
     - name: http
       port: 80
