@@ -39,6 +39,9 @@ spec:
               value: dev
             - name: SPRING_CLOUD_AWS_REGION_STATIC
               value: ap-northeast-2
+            # ⚠️ 부하테스트(A 방식) 전용: 큐토큰 검증 우회. 측정 끝나면 "false"로 되돌리거나 제거.
+            - name: QUEUE_TOKEN_BYPASS
+              value: "true"
 
           # Actuator 기반 기본 헬스체크. 앱 설정에서 probe endpoint가 비활성화되어 있으면
           # /actuator/health로 낮추는 방식으로 조정필요
