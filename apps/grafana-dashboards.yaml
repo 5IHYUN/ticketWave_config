@@ -1,0 +1,26 @@
+# Grafana 대시보드 전용 ArgoCD Application.
+# root-app(app-of-apps)이 apps/ 디렉토리를 재귀로 읽으므로 이 파일을 두면 자동 등록된다.
+# dashboards/ 디렉토리(kustomize)를 monitoring 네임스페이스로 sync한다.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: grafana-dashboards
+  namespace: argocd
+spec:
+  project: default
+
+  source:
+    repoURL: https://github.com/CLD-05/team5-ticket-config.git
+    targetRevision: develop
+    path: dashboards
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring   # Grafana 사이드카가 이 네임스페이스의 ConfigMap을 watch
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
