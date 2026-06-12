@@ -65,8 +65,8 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum by (app) (process_cpu_usage{app=~\"booking-api|booking-worker\"})",
-          "legendFormat": "{{app}}",
+          "expr": "sum by (job) (process_cpu_usage{job=~\"ticket-service|booking-worker\"})",
+          "legendFormat": "{{job}}",
           "refId": "A"
         }
       ]
@@ -109,8 +109,8 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum by (app) (jvm_memory_used_bytes{area=\"heap\", app=~\"booking-api|booking-worker\"})",
-          "legendFormat": "{{app}}",
+          "expr": "sum by (job) (jvm_memory_used_bytes{area=\"heap\", job=~\"ticket-service|booking-worker\"})",
+          "legendFormat": "{{job}}",
           "refId": "A"
         }
       ]
@@ -153,8 +153,8 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum by (app) (tomcat_threads_active_current{app=~\"booking-api|booking-worker\"})",
-          "legendFormat": "{{app}}",
+          "expr": "sum by (job) (tomcat_threads_active_current{job=~\"ticket-service|booking-worker\"})",
+          "legendFormat": "{{job}}",
           "refId": "A"
         }
       ]
@@ -241,7 +241,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum by (pod) (rate(container_cpu_usage_seconds_total{container=~\"booking-api|booking-worker\"}[1m]))",
+          "expr": "sum by (pod) (rate(container_cpu_usage_seconds_total{container=~\"ticket-service|booking-worker\"}[2m]))",
           "legendFormat": "{{pod}}",
           "refId": "A"
         }
@@ -285,7 +285,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum by (pod) (container_memory_working_set_bytes{container=~\"booking-api|booking-worker\"})",
+          "expr": "sum by (pod) (container_memory_working_set_bytes{container=~\"ticket-service|booking-worker\"})",
           "legendFormat": "{{pod}}",
           "refId": "A"
         }

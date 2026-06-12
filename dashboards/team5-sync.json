@@ -65,7 +65,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum by (uri) (rate(http_server_requests_seconds_count{uri=~\"/api/v1/queue.*\"}[1m]))",
+          "expr": "sum by (uri) (rate(http_server_requests_seconds_count{uri=~\"/api/v1/queue.*\"}[2m]))",
           "legendFormat": "{{uri}}",
           "refId": "A"
         }
@@ -109,7 +109,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "histogram_quantile(0.99, sum by (le) (rate(http_server_requests_seconds_bucket{uri=~\"/api/v1/queue.*\"}[1m])))",
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(http_server_requests_seconds_bucket{uri=~\"/api/v1/queue.*\"}[2m])))",
           "legendFormat": "p99",
           "refId": "A"
         }
@@ -153,7 +153,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum by (uri) (rate(http_server_requests_seconds_count{uri=~\"/api/v1/seats.*\"}[1m]))",
+          "expr": "sum by (uri) (rate(http_server_requests_seconds_count{uri=~\"/api/v1/seats.*\"}[2m]))",
           "legendFormat": "{{uri}}",
           "refId": "A"
         }
@@ -197,7 +197,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "histogram_quantile(0.99, sum by (le) (rate(http_server_requests_seconds_bucket{uri=~\"/api/v1/seats.*\"}[1m])))",
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(http_server_requests_seconds_bucket{uri=~\"/api/v1/seats.*\"}[2m])))",
           "legendFormat": "p99",
           "refId": "A"
         }
@@ -241,7 +241,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum by (status) (rate(http_server_requests_seconds_count{uri=~\"/api/v1/(queue|seats).*\"}[1m]))",
+          "expr": "sum by (status) (rate(http_server_requests_seconds_count{uri=~\"/api/v1/(queue|seats).*\"}[2m]))",
           "legendFormat": "{{status}}",
           "refId": "A"
         }
