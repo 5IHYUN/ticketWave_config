@@ -79,7 +79,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum by (uri) (rate(http_server_requests_seconds_count{uri=~\"/api/v1/queue.*\"}[2m]))",
+          "expr": "sum by (uri) (rate(http_server_requests_seconds_count{uri=~\"/api/v1/shows/.*/queue.*\"}[2m]))",
           "legendFormat": "{{uri}}",
           "refId": "A"
         }
@@ -124,7 +124,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "histogram_quantile(0.99, sum by (le) (rate(http_server_requests_seconds_bucket{uri=~\"/api/v1/queue.*\"}[2m])))",
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(http_server_requests_seconds_bucket{uri=~\"/api/v1/shows/.*/queue.*\"}[2m])))",
           "legendFormat": "p99",
           "refId": "A"
         }
@@ -461,7 +461,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum by (job) (process_cpu_usage{job=~\"ticket-service|booking-worker\"})",
+          "expr": "sum by (job) (process_cpu_usage{job=~\"ticket-service|team5-dev-booking-worker\"})",
           "legendFormat": "{{job}}",
           "refId": "A"
         }
@@ -551,7 +551,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum by (job) (jvm_memory_used_bytes{area=\"heap\", job=~\"ticket-service|booking-worker\"})",
+          "expr": "sum by (job) (jvm_memory_used_bytes{area=\"heap\", job=~\"ticket-service|team5-dev-booking-worker\"})",
           "legendFormat": "{{job}}",
           "refId": "A"
         }
