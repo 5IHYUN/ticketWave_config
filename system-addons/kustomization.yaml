@@ -9,3 +9,4 @@ resources:
   - yace.yaml
   - cluster-autoscaler.yaml
   - clustersecretstore.yaml
+  - zipkin.yaml
