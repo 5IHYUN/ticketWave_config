@@ -11,19 +11,19 @@ apiVersion: keda.sh/v1alpha1
 kind: ScaledObject
 metadata:
   name: booking-worker
-  namespace: ticketing           # 서비스 네임스페이스 (config repo 확인 결과)
+  namespace: ticketing # 서비스 네임스페이스 (config repo 확인 결과)
 spec:
   scaleTargetRef:
     name: booking-worker
-  minReplicaCount: 1             # scale-to-zero 원하면 0 (첫 메시지 cold start 감수)
+  minReplicaCount: 1 # scale-to-zero 원하면 0 (첫 메시지 cold start 감수)
   maxReplicaCount: 20
-  pollingInterval: 15            # 15초마다 큐 길이 확인
-  cooldownPeriod: 120            # 마지막 트리거 후 120초 뒤 축소
+  pollingInterval: 10 # 10초마다 큐 길이 확인
+  cooldownPeriod: 120 # 마지막 트리거 후 120초 뒤 축소
   triggers:
     - type: aws-sqs-queue
       metadata:
-        queueURL: "https://sqs.ap-northeast-2.amazonaws.com/194722398200/team5-prod-booking-queue"
+        queueURL: "https://sqs.ap-northeast-2.amazonaws.com/194722398200/team5-prod-booking-queue.fifo"
         awsRegion: "ap-northeast-2"
-        queueLength: "5"                     # Pod당 목표 메시지 수 (부하테스트 시나리오2로 튜닝)
-        activationQueueLength: "1"           # 0→1 스케일 임계 (min 0일 때 의미)
-        identityOwner: operator              # keda-operator IRSA 자격증명 사용
+        queueLength: "5" # Pod당 목표 메시지 수 (부하테스트 시나리오2로 튜닝)
+        activationQueueLength: "1" # 0→1 스케일 임계 (min 0일 때 의미)
+        identityOwner: operator # keda-operator IRSA 자격증명 사용
