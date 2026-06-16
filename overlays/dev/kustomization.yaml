@@ -1,14 +1,7 @@
-# env/dev/ticket-service/kustomization.yaml
-# 이 디렉토리는 services/ticket-service.yaml Application이 가리키는 경로인데
-# 현재 repo에 비어있음(워커/서비스 Deployment 미존재). 워커 매니페스트가 추가되면
-# 아래 resources에 함께 등록.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
 resources:
-  # Application manifests. CI/CD updates the image tag in the images section.
-  - serviceaccount.yaml
-  - externalsecret.yaml
-  - deployment.yaml
-  - service.yaml
-  - ingress.yaml
+  - ../../base
 
   # worker 워크로드
   - deployment-booking-worker.yaml
