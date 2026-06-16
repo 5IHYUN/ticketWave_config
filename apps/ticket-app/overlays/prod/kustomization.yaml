@@ -1,6 +1,8 @@
+# overlays/prod/kustomization.yaml
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
+  - externalsecret.yaml
   - ../../base
 
   # worker 워크로드
@@ -12,8 +14,12 @@ resources:
   - scaledobject-booking-worker.yaml
   - servicemonitor-booking.yaml
   - prometheusrule-booking.yaml
+  - prewarm-scaledobject.yaml
 
 images:
   - name: ticket-service
-    newName: 194722398200.dkr.ecr.ap-northeast-2.amazonaws.com/team5-dev-app
-    newTag: dev-38ac71a
+    newName: 194722398200.dkr.ecr.ap-northeast-2.amazonaws.com/team5-prod-app
+    newTag: prod-placeholder
+
+patches:
+  - path: deployment-patch.yaml

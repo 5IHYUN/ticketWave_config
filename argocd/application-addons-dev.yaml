@@ -1,23 +1,17 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: ticket-service
+  name: system-addons-dev
   namespace: argocd
 spec:
-  project: default
-
+  project: team5-project
   source:
     repoURL: https://github.com/CLD-05/team5-ticket-config.git
     targetRevision: develop
-    path: overlays/dev
-
+    path: system-addons/overlays/dev
   destination:
     server: https://kubernetes.default.svc
-    namespace: ticketing
-
+    namespace: argocd
   syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
-    syncOptions:
-      - CreateNamespace=true
+    automated: { prune: true, selfHeal: true }
+    syncOptions: [ CreateNamespace=true ]
