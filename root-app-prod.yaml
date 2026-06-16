@@ -1,0 +1,18 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: ticket-platform-root-prod
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/CLD-05/team5-ticket-config.git
+    targetRevision: develop
+    path: apps-prod
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
