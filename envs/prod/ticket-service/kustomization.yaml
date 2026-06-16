@@ -1,0 +1,25 @@
+# envs/prod/ticket-service/kustomization.yaml
+# prod ArgoCD Application이 바라볼 ticket-service 매니페스트 묶음.
+# app repo prod workflow가 아래 images.newTag를 갱신하고, ArgoCD가 GitOps 방식으로 반영.
+resources:
+  # Application manifests. CI/CD updates the image tag in the images section.
+  - serviceaccount.yaml
+  - externalsecret.yaml
+  - deployment.yaml
+  - service.yaml
+  - ingress.yaml
+
+  # worker 워크로드
+  - deployment-booking-worker.yaml
+  - service-booking-worker.yaml
+
+  # Observability / autoscaling manifests added by the observability owner.
+  # Keep these resources registered so Prometheus/KEDA settings are not dropped.
+  - scaledobject-booking-worker.yaml
+  - servicemonitor-booking.yaml
+  - prometheusrule-booking.yaml
+
+images:
+  - name: ticket-service
+    newName: 194722398200.dkr.ecr.ap-northeast-2.amazonaws.com/team5-prod-app
+    newTag: prod-placeholder
