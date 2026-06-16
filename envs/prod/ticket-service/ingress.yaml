@@ -1,0 +1,28 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ticket-service
+  namespace: ticketing
+  labels:
+    app: booking
+    app.kubernetes.io/name: ticket-service
+    app.kubernetes.io/part-of: team5-ticket
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80}]'
+    alb.ingress.kubernetes.io/healthcheck-path: /actuator/health
+spec:
+  ingressClassName: alb
+  rules:
+    # 도메인/Route53/ExternalDNS 확정 전까지는 host 없이 ALB DNS로 접근
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: ticket-service
+                port:
+                  name: http
