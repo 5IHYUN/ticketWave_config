@@ -6,5 +6,7 @@ resources:
   - yace.yaml
   - cluster-autoscaler.yaml
   - kube-prometheus-stack.yaml
+  - metrics-server.yaml
 patches:
   - path: aws-load-balancer-controller-patch.yaml
+
