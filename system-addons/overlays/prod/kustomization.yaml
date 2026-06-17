@@ -7,3 +7,5 @@ resources:
   - cluster-autoscaler.yaml
   - kube-prometheus-stack.yaml
   - alertmanager-slack-externalsecret.yaml
+patches:
+  - path: aws-load-balancer-controller-patch.yaml
