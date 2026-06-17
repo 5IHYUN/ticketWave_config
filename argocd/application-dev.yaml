@@ -12,6 +12,12 @@ spec:
   destination:
     server: https://kubernetes.default.svc
     namespace: ticketing
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      name: booking-worker
+      jsonPointers:
+        - /spec/replicas
   syncPolicy:
     automated: { prune: true, selfHeal: true }
     syncOptions: [ CreateNamespace=true ]
