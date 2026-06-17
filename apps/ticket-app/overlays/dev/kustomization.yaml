@@ -13,6 +13,7 @@ resources:
   - scaledobject-booking-worker.yaml
   - servicemonitor-booking.yaml
   - prometheusrule-booking.yaml
+  - hpa.yaml
 
 images:
   - name: ticket-service
