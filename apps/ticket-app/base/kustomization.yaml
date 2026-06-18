@@ -5,6 +5,4 @@ resources:
   - service.yaml
   - serviceaccount.yaml
   - ingress.yaml
-  - hpa.yaml
-  - prometheus-rule.yaml
-  - servicemonitor.yaml
+
