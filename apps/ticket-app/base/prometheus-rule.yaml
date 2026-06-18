@@ -1,0 +1,90 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: ticket-app-slo-alerts
+  namespace: ticket-app
+  labels:
+    release: kube-prometheus-stack
+spec:
+  groups:
+    - name: ticket-app-slo.rules
+      rules:
+        - alert: TicketAppHighErrorRate
+          expr: |
+            (
+              sum(rate(http_server_requests_seconds_count{
+                namespace="ticket-app",
+                status=~"5.."
+              }[5m]))
+              /
+              sum(rate(http_server_requests_seconds_count{
+                namespace="ticket-app"
+              }[5m]))
+            ) > 0.01
+          for: 5m
+          labels:
+            severity: warning
+            service: ticket-app
+            slo: availability
+          annotations:
+            summary: "Ticket App 5xx error rate is high"
+            description: "Ticket App 5xx error rate exceeded 1% for more than 5 minutes."
+
+        - alert: TicketAppCriticalErrorRate
+          expr: |
+            (
+              sum(rate(http_server_requests_seconds_count{
+                namespace="ticket-app",
+                status=~"5.."
+              }[5m]))
+              /
+              sum(rate(http_server_requests_seconds_count{
+                namespace="ticket-app"
+              }[5m]))
+            ) > 0.05
+          for: 3m
+          labels:
+            severity: critical
+            service: ticket-app
+            slo: availability
+          annotations:
+            summary: "Ticket App 5xx error rate is critical"
+            description: "Ticket App 5xx error rate exceeded 5% for more than 3 minutes."
+
+        - alert: TicketAppHighLatencyP95
+          expr: |
+            histogram_quantile(
+              0.95,
+              sum(rate(http_server_requests_seconds_bucket{
+                namespace="ticket-app"
+              }[5m])) by (le)
+            ) > 1
+          for: 5m
+          labels:
+            severity: warning
+            service: ticket-app
+            slo: latency
+          annotations:
+            summary: "Ticket App p95 latency is high"
+            description: "Ticket App p95 latency exceeded 1 second for more than 5 minutes."
+
+        - alert: TicketAppErrorBudgetBurn
+          expr: |
+            (
+              sum(rate(http_server_requests_seconds_count{
+                namespace="ticket-app",
+                status=~"5.."
+              }[30m]))
+              /
+              sum(rate(http_server_requests_seconds_count{
+                namespace="ticket-app"
+              }[30m]))
+            ) > 0.001
+          for: 10m
+          labels:
+            severity: warning
+            service: ticket-app
+            slo: error-budget
+          annotations:
+            summary: "Ticket App error budget burn detected"
+            description: "Ticket App error rate exceeded the 99.9% SLO error budget threshold for 10 minutes."
