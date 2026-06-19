@@ -57,7 +57,7 @@ spec:
         #    apply 후 Prometheus 에서 실제 라벨값 확인하고 필요시 좁힐 것.
         - record: booking:queue_age_seconds:max
           expr: |
-            max(aws_sqs_approximate_age_of_oldest_message_maximum{dimension_QueueName=~"team5-dev-booking-queue(\.fifo)?"})
+            max(aws_sqs_approximate_age_of_oldest_message_maximum{dimension_QueueName="team5-dev-booking-queue"})
 
         # bad=1 / good=0. threshold 60s.
         # (KEDA pollingInterval 15s + cooldown 120s 반응 lag 흡수 위해 60s. 시나리오2로 30s 조이기 검토)
@@ -208,7 +208,7 @@ spec:
         # SLO 는 위의 '큐 나이'. 이건 KEDA 가 backlog 를 따라잡고 있는지 보는 운영 신호.
         - alert: BookingQueueBacklogHigh
           expr: |
-            max(aws_sqs_approximate_number_of_messages_visible_maximum{dimension_QueueName=~"team5-dev-booking-queue(\.fifo)?"}) > 500
+            max(aws_sqs_approximate_number_of_messages_visible_maximum{dimension_QueueName="team5-dev-booking-queue"}) > 500
           for: 3m
           labels:
             severity: warning
