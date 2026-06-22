@@ -1,5 +1,34 @@
-# booking 도메인 알림 규칙.
-# 즉시 동작하는 규칙(Actuator 기본 메트릭)과 앱 계측 후 동작하는 규칙을 구분.
+# =====================================================================
+# booking 도메인 SLO / 알림 규칙  (prod)
+# ---------------------------------------------------------------------
+# dev overlays/dev/prometheusrule-booking.yaml 의 3그룹 구조를 prod 로 포팅.
+# 차이점(라이브 검증 기반):
+#   - 큐 이름: team5-prod-booking-queue.fifo  (prod SQS 는 FIFO.
+#     YACE 라벨 dimension_QueueName 실측값으로 확정. dev 의 .fifo 없는
+#     이름과 다르므로 그대로 복붙하면 라벨 미스매치로 영영 안 뜸.)
+#   - 임계값(threshold)은 PLACEHOLDER. prod 는 m6i.large / HPA floor 3 /
+#     FIFO 라 p99 분포가 dev 와 다름. 반드시 prod 시나리오2 측정 후 교체.
+#
+# 설계 원칙 (dev 와 동일, 멘토 피드백 반영):
+#   - 절대값 임계("p99 > 1s")가 아니라 "위반 빈도 + 에러버짓" 기반.
+#   - SLI 판정은 1분 윈도우 단위(good=0 / bad=1)로 기록 -> 30일 누적이 곧 예산 소비량.
+#   - latency/freshness 는 윈도우 기반 SLO, 가용성(성공률)은 이벤트 기반 비율 SLO.
+#   - conflict(409, 동시성 정상 거절)는 어떤 분모에도 넣지 않음.
+#
+# ⚠️ SLI(측정) != SLO 임계값(목표).
+#    이 파일을 먼저 배포해야 booking:seathold_latency_p99_seconds /
+#    booking:queue_age_seconds:max record 가 prod 에 쌓이기 시작함.
+#    그 baseline 을 보고 나서야 bad_window threshold 를 데이터로 확정 가능.
+#    => 순서: 이 파일 merge(record 라이브) -> prod 시나리오2 부하 -> p99 baseline 확인
+#             -> threshold 교체 PR -> burn-rate alert 신뢰 가능.
+#
+# ⚠️ repo 에 있다 != 클러스터에 떠있다.
+#    - ArgoCD targetRevision=develop. develop 머지 후 ticket-app-prod Application
+#      이 sync 돼야 반영됨. (system-addons-prod 의 Prometheus 가 떠 있어야 함.)
+#    - apply 후 prod Prometheus /api/v1/rules 에서 booking.sli / slo_budget /
+#      alerts 3그룹이 health=ok 로 로드됐는지, 각 record 에 값이 찍히는지
+#      (No data / 0 고정 아닌지) 반드시 확인.
+# =====================================================================
 apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
 metadata:
@@ -7,42 +36,161 @@ metadata:
   namespace: ticketing             # ruleSelectorNilUsesHelmValues:false 로 전 네임스페이스 발견됨
 spec:
   groups:
-    - name: booking.rules
+    # =================================================================
+    # [그룹 1] SLI 판정 — 1분 윈도우. interval:1m 이라 1샘플=1윈도우.
+    #   이 그룹의 record 가 30일 누적/burn-rate 의 원재료가 된다.
+    #   ⚠️ 이 그룹부터 먼저 라이브로 띄워 prod baseline 을 수집한다.
+    # =================================================================
+    - name: booking.sli
+      interval: 1m
       rules:
-        # [즉시 동작] 동기 API 5xx 오류율 > 5%
-        # 주의: 좌석 충돌 409는 4xx라 여기 안 잡힘 (의도된 동시성 거절 = 정상)
-        - alert: BookingHighErrorRate
-          expr: |
-            sum(rate(http_server_requests_seconds_count{status=~"5.."}[5m]))
-            /
-            sum(rate(http_server_requests_seconds_count[5m])) > 0.05
-          for: 2m
-          labels:
-            severity: warning
-            team: team5
-          annotations:
-            summary: "booking 5xx 오류율 5% 초과"
-            description: "현재 오류율 {{ $value | humanizePercentage }}"
-
-        # [즉시 동작] 동기 API p99 지연 > 1s
-        - alert: BookingHighLatency
+        # ---- (동기) 좌석 선점 p99 지연 [측정: threshold 불필요] ----
+        # uri 필터로 좌석 선점 API 만. rate window 2m(대시보드와 일치).
+        # 무트래픽 분(分)에는 시계열 자체가 없음 -> bad_window 에 gap.
+        #   gap = "그 분엔 요청이 없어 위반 판정 불가" 로 처리(예산 분모에서도 제외). 의도된 동작.
+        - record: booking:seathold_latency_p99_seconds
           expr: |
             histogram_quantile(0.99,
-              sum(rate(http_server_requests_seconds_bucket[5m])) by (le)) > 1
-          for: 5m
+              sum by (le) (rate(http_server_requests_seconds_bucket{uri=~"/api/v1/seats.*"}[2m])))
+
+        # bad=1 / good=0.
+        # ⚠️ PLACEHOLDER 0.3s — prod baseline 측정 전 임시값.
+        #    dev 에서 300ms 는 도달 불가로 관측됨(p99 0.4~9.4s). prod 는 환경이
+        #    다르나, 측정 전까지 이 숫자를 신뢰하지 말 것. prod 시나리오2 측정 후
+        #    booking:seathold_latency_p99_seconds 의 정상상태 분포를 보고 교체.
+        - record: booking:seathold_latency:bad_window
+          expr: booking:seathold_latency_p99_seconds > bool 0.3
+
+        # ---- (비동기) 큐 나이 = 가장 오래 대기 중인 메시지 나이(초) [측정] ----
+        # YACE 가 ApproximateAgeOfOldestMessage(Maximum) 를 이미 수집 중.
+        # 게이지라 항상 존재(큐 비면 0). count 가 아니라 'age' 가 우리 SLI.
+        # ✅ prod 큐 이름은 .fifo 로 끝남(YACE dimension_QueueName 실측 확정).
+        - record: booking:queue_age_seconds:max
+          expr: |
+            max(aws_sqs_approximate_age_of_oldest_message_maximum{dimension_QueueName="team5-prod-booking-queue.fifo"})
+
+        # bad=1 / good=0.
+        # ⚠️ PLACEHOLDER 60s — prod baseline 측정 후 조일 것.
+        #    (KEDA pollingInterval 10s + cooldown 120s 반응 lag 흡수용 시작값.)
+        - record: booking:queue_age:bad_window
+          expr: booking:queue_age_seconds:max > bool 60
+
+    # =================================================================
+    # [그룹 2] 에러버짓 — 30일 누적. 무거운 30d 쿼리라 interval:5m.
+    #   consumed = bad 분 수, observed = 관측된 분 수(무트래픽 제외).
+    #   budget_remaining_ratio = 1 - (consumed / (observed * 허용bad비율))
+    #     1.0 = 예산 100% 남음 / 0.0 = 소진 / 음수 = SLO 위반(초과 소비)
+    #   * 허용 bad 비율(0.005 / 0.01)은 SLO 목표(99.5% / 99%)에서 유도된
+    #     '설계 결정값'이라 측정 대상 아님. threshold(그룹1)와는 성격이 다름.
+    # =================================================================
+    - name: booking.slo_budget
+      interval: 5m
+      rules:
+        # ---- (동기) target 99.5% -> 허용 bad 비율 0.005  (≈ 30일 216분) ----
+        - record: booking:seathold_latency:bad_windows_30d
+          expr: sum_over_time(booking:seathold_latency:bad_window[30d])
+        - record: booking:seathold_latency:observed_windows_30d
+          expr: count_over_time(booking:seathold_latency:bad_window[30d])
+        - record: booking:seathold_latency:budget_remaining_ratio
+          expr: |
+            1 - (
+              booking:seathold_latency:bad_windows_30d
+              /
+              (booking:seathold_latency:observed_windows_30d * 0.005)
+            )
+
+        # ---- (비동기) target 99% -> 허용 bad 비율 0.01  (≈ 30일 432분) ----
+        - record: booking:queue_age:bad_windows_30d
+          expr: sum_over_time(booking:queue_age:bad_window[30d])
+        - record: booking:queue_age:observed_windows_30d
+          expr: count_over_time(booking:queue_age:bad_window[30d])
+        - record: booking:queue_age:budget_remaining_ratio
+          expr: |
+            1 - (
+              booking:queue_age:bad_windows_30d
+              /
+              (booking:queue_age:observed_windows_30d * 0.01)
+            )
+
+    # =================================================================
+    # [그룹 3] 알림 — multi-window burn-rate (fast=page / slow=ticket).
+    #   burn rate = 최근 bad 비율 / 허용 bad 비율.
+    #   fast 14.4배(1h&5m) -> ~2일이면 30일 예산 소진 = 즉시 대응.
+    #   slow  6배 (6h&30m) -> 며칠 내 소진 = 추적.
+    #
+    # ⚠️ latency burn-rate 알람은 그룹1 PLACEHOLDER threshold(0.3s)에 의존.
+    #    baseline 확정 전엔 트래픽 시 즉시 fast-burn 이 뜰 수 있음 = 정상(임시값이
+    #    틀렸다는 신호). prod 시나리오2 측정 후 threshold 교체하면 의미를 가짐.
+    #    그 전까지 page 가 부담되면 Alertmanager 에서 SeatHoldLatency* 만 임시 silence.
+    # =================================================================
+    - name: booking.alerts
+      rules:
+        # ---- (동기) 좌석 선점 p99 SLO burn-rate ----
+        - alert: SeatHoldLatencyFastBurn
+          expr: |
+            avg_over_time(booking:seathold_latency:bad_window[1h]) > (14.4 * 0.005)
+            and
+            avg_over_time(booking:seathold_latency:bad_window[5m]) > (14.4 * 0.005)
+          for: 2m
+          labels:
+            severity: critical
+            team: team5
+            env: prod
+            slo: seat-hold-latency
+          annotations:
+            summary: "[prod] 좌석 선점 p99 SLO 예산 빠른 소진 (fast burn)"
+            description: "최근 1h bad-window 비율 {{ $value | humanizePercentage }} — 목표 0.5%의 14.4배 초과. 이 속도면 ~2일에 30일 예산 소진."
+
+        - alert: SeatHoldLatencySlowBurn
+          expr: |
+            avg_over_time(booking:seathold_latency:bad_window[6h]) > (6 * 0.005)
+            and
+            avg_over_time(booking:seathold_latency:bad_window[30m]) > (6 * 0.005)
+          for: 15m
           labels:
             severity: warning
             team: team5
+            env: prod
+            slo: seat-hold-latency
           annotations:
-            summary: "booking API p99 지연 1s 초과"
-            description: "현재 p99 {{ $value }}s"
+            summary: "[prod] 좌석 선점 p99 SLO 예산 소진 추세 (slow burn)"
+            description: "최근 6h bad-window 비율 {{ $value | humanizePercentage }} — 목표 0.5%의 6배 초과."
 
-        # [앱 계측 후 동작] 예매 확정 성공률 SLO(99%) 위반
-        # booking_confirm_total{result="confirmed|failed"} 메트릭이 Worker에 있어야 함
-        # (SLO 문서 4-2의 Micrometer 계측 참고). 계측 전엔 시계열이 없어 발동 안 함.
-        # 분모에서 conflict(동시성 정상 거절) 제외 → confirmed/(confirmed+failed)
-        # conflict는 의도된 거절이라 실패율에 넣으면 SLO가 왜곡됨 (k6 부하 시 다수 발생)
-        - alert: BookingConfirmSLOBreach
+        # ---- (비동기) 큐 나이 SLO burn-rate ----
+        - alert: QueueAgeFastBurn
+          expr: |
+            avg_over_time(booking:queue_age:bad_window[1h]) > (14.4 * 0.01)
+            and
+            avg_over_time(booking:queue_age:bad_window[5m]) > (14.4 * 0.01)
+          for: 2m
+          labels:
+            severity: critical
+            team: team5
+            env: prod
+            slo: queue-age
+          annotations:
+            summary: "[prod] 큐 나이 SLO 예산 빠른 소진 (fast burn)"
+            description: "최근 1h 큐 나이 60s 초과 윈도우 비율 {{ $value | humanizePercentage }} — 워커/노드 프로비저닝이 못 따라가는 신호."
+
+        - alert: QueueAgeSlowBurn
+          expr: |
+            avg_over_time(booking:queue_age:bad_window[6h]) > (6 * 0.01)
+            and
+            avg_over_time(booking:queue_age:bad_window[30m]) > (6 * 0.01)
+          for: 15m
+          labels:
+            severity: warning
+            team: team5
+            env: prod
+            slo: queue-age
+          annotations:
+            summary: "[prod] 큐 나이 SLO 예산 소진 추세 (slow burn)"
+            description: "최근 6h 큐 나이 60s 초과 윈도우 비율 {{ $value | humanizePercentage }}."
+
+        # ---- (비동기) 예매 확정 성공률 SLO 99% — 이벤트 기반 ----
+        # conflict(동시성 정상 거절)는 분모에서 제외: confirmed/(confirmed+failed).
+        # booking_confirm_total{result="confirmed|failed"} 메트릭이 Worker 에 있어야 함.
+        - alert: BookingConfirmSuccessSLOBreach
           expr: |
             (
               sum(rate(booking_confirm_total{result="confirmed"}[5m]))
@@ -53,20 +201,39 @@ spec:
           labels:
             severity: critical
             team: team5
+            env: prod
+            slo: booking-availability
           annotations:
-            summary: "예매 확정 성공률 SLO(99%) 위반"
-            description: "현재 성공률 {{ $value | humanizePercentage }}"
+            summary: "[prod] 예매 확정 성공률 SLO(99%) 위반"
+            description: "현재 성공률 {{ $value | humanizePercentage }} (conflict 제외)."
 
-        # [YACE 도입 후 동작] booking-queue 적체 과다
-        # YACE가 노출하는 메트릭/라벨 기준. 실제 라벨명은 YACE 버전에 따라 다를 수 있어
-        # Prometheus UI에서 aws_sqs_ 메트릭의 라벨(dimension_QueueName 등) 한 번 확인 후 맞출 것.
+        # ---- (동기) 5xx 오류율 가드 ----
+        # 409 좌석 충돌은 4xx라 여기 안 잡힘 = 의도된 동시성 거절은 정상.
+        - alert: BookingHighErrorRate
+          expr: |
+            sum(rate(http_server_requests_seconds_count{status=~"5.."}[5m]))
+            /
+            sum(rate(http_server_requests_seconds_count[5m])) > 0.05
+          for: 2m
+          labels:
+            severity: warning
+            team: team5
+            env: prod
+          annotations:
+            summary: "[prod] booking 5xx 오류율 5% 초과"
+            description: "현재 오류율 {{ $value | humanizePercentage }}."
+
+        # ---- 큐 적체(count) — SLO 아님. KEDA 헬스/포화 지표 ----
+        # SLO 는 위의 '큐 나이'. 이건 KEDA 가 backlog 를 따라잡고 있는지 보는 운영 신호.
+        # ✅ prod 큐 이름 .fifo 반영(YACE 실측 확정). dev 룰 복붙 시 여기서 미스매치 났었음.
         - alert: BookingQueueBacklogHigh
           expr: |
-            max(aws_sqs_approximate_number_of_messages_visible_maximum{dimension_QueueName="team5-prod-booking-queue"}) > 500
+            max(aws_sqs_approximate_number_of_messages_visible_maximum{dimension_QueueName="team5-prod-booking-queue.fifo"}) > 500
           for: 3m
           labels:
             severity: warning
             team: team5
+            env: prod
           annotations:
-            summary: "booking-queue 적체 500 초과"
-            description: "현재 적체 {{ $value }}건 — KEDA 스케일이 못 따라가는지 확인"
+            summary: "[prod] booking-queue 적체 500 초과 (KEDA 추적 지표, SLO 아님)"
+            description: "현재 적체 {{ $value }}건 — KEDA 스케일/노드 프로비저닝이 못 따라가는지 확인."
