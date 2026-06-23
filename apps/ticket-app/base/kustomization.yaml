@@ -5,4 +5,5 @@ resources:
   - service.yaml
   - serviceaccount.yaml
   - ingress.yaml
+  - db-init-job.yaml
 
