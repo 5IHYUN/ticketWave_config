@@ -22,6 +22,15 @@ spec:
     targetRevision: 61.7.2
     helm:
       values: |
+        # EKS 관리형 control plane 메트릭은 노출 안 됨 -> 해당 default alert는 항상 오탐.
+        # KubeSchedulerDown / KubeControllerManagerDown / etcd / kubeProxy 4종 비활성.
+        defaultRules:
+          create: true
+          rules:
+            kubeScheduler: false
+            kubeControllerManager: false
+            etcd: false
+            kubeProxy: false
         grafana:
           enabled: true
           grafana.ini:
