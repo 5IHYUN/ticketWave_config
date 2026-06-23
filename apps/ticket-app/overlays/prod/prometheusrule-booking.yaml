@@ -45,13 +45,16 @@ spec:
       interval: 1m
       rules:
         # ---- (동기) 좌석 선점 p99 지연 [측정: threshold 불필요] ----
-        # uri 필터로 좌석 선점 API 만. rate window 2m(대시보드와 일치).
+        # uri 정확매칭 + method=POST 격리. (라이브 라벨 확정: uri="/api/v1/seats/{seatId}/hold")
+        #   기존 prefix 정규식 /api/v1/seats.* 은 같은 path 의 DELETE(release) 까지 흡수해
+        #   p99 를 오염시켰음 -> NaN/오발(FastBurn) 원인. 정확매칭으로 격리.
+        # rate window 2m(대시보드와 일치).
         # 무트래픽 분(分)에는 시계열 자체가 없음 -> bad_window 에 gap.
         #   gap = "그 분엔 요청이 없어 위반 판정 불가" 로 처리(예산 분모에서도 제외). 의도된 동작.
         - record: booking:seathold_latency_p99_seconds
           expr: |
             histogram_quantile(0.99,
-              sum by (le) (rate(http_server_requests_seconds_bucket{uri=~"/api/v1/seats.*"}[2m])))
+              sum by (le) (rate(http_server_requests_seconds_bucket{uri="/api/v1/seats/{seatId}/hold", method="POST"}[2m])))
 
         # bad=1 / good=0.
         # ⚠️ PLACEHOLDER 0.3s — prod baseline 측정 전 임시값.
