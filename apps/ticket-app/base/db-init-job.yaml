@@ -1,0 +1,25 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ticket-db-init
+  namespace: ticketing
+  labels:
+    app: booking-db-init
+spec:
+  template:
+    spec:
+      serviceAccountName: ticket-service
+      containers:
+        - name: db-init
+          image: ticket-service
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - secretRef:
+                name: ticket-app-secret
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: dev,db-init
+            - name: SPRING_CLOUD_AWS_REGION_STATIC
+              value: ap-northeast-2
+      restartPolicy: OnFailure
+  backoffLimit: 2
