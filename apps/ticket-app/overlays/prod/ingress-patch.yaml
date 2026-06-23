@@ -1,0 +1,28 @@
+# prod 전용 Ingress 패치: host 도메인 설정 및 ExternalDNS 연동
+# external-dns가 Ingress의 host를 감지하여 Route 53에 A/CNAME 레코드 자동 생성
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ticket-service
+  namespace: ticketing
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}]'
+    alb.ingress.kubernetes.io/healthcheck-path: /actuator/health
+    # ExternalDNS: hostname 명시적 지정 (ingress host 방식으로도 자동 감지되지만 명시 권장)
+    external-dns.alpha.kubernetes.io/hostname: team5.cloud-infra.shop
+spec:
+  ingressClassName: alb
+  rules:
+    - host: team5.cloud-infra.shop
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: ticket-service
+                port:
+                  name: http

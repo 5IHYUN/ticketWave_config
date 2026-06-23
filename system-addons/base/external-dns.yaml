@@ -23,7 +23,7 @@ spec:
         txtOwnerId: team5-ticketing
 
         domainFilters:
-          - ticketing.team5.com
+          - cloud-infra.shop
 
   destination:
     server: https://kubernetes.default.svc
