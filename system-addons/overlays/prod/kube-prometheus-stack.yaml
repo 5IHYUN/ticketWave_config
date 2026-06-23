@@ -27,7 +27,7 @@ spec:
         defaultRules:
           create: true
           rules:
-            kubeScheduler: false
+            kubeSchedulerAlerting: false
             kubeControllerManager: false
             etcd: false
             kubeProxy: false
