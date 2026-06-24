@@ -54,6 +54,16 @@ spec:
         prometheus:
           prometheusSpec:
             retention: 15d
+            # 부하 중 t3.large CPU 스로틀 -> /-/healthy 3s 초과 -> liveness 실패 -> 재시작 방지.
+            # liveness probe는 operator 관리라 values로 못 늘림 -> 자원 보장으로 스로틀 자체 제거.
+            # 안정 사용량 ~723Mi/60m 기준, 노드 8Gi 내에서 피크 흡수.
+            resources:
+              requests:
+                cpu: 250m
+                memory: 1Gi
+              limits:
+                cpu: "1"
+                memory: 2Gi
             serviceMonitorSelectorNilUsesHelmValues: false
             ruleSelectorNilUsesHelmValues: false
             podMonitorSelectorNilUsesHelmValues: false
