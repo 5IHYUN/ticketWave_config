@@ -3,4 +3,4 @@ kind: GatewayClass
 metadata:
   name: alb
 spec:
-  controllerName: ingress.k8s.aws/alb
+  controllerName: gateway.k8s.aws/alb
