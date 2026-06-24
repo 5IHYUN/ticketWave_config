@@ -12,4 +12,7 @@ spec:
         serviceAccount:
           create: true
           name: aws-load-balancer-controller
-        enableGatewayAPI: true
+        controllerConfig:
+          featureGates:
+            ALBGatewayAPI: true
+            NLBGatewayAPI: true
