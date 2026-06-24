@@ -29,5 +29,7 @@ spec:
               value: ap-northeast-2
             - name: SPRING_MAIN_WEB_APPLICATION_TYPE
               value: none
+            - name: SPRING_CLOUD_AWS_SQS_ENABLED
+              value: "false"
       restartPolicy: OnFailure
   backoffLimit: 2
