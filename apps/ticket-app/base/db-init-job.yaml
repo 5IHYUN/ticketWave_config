@@ -6,6 +6,9 @@ metadata:
   labels:
     app: booking-db-init
 spec:
+  selector:
+    matchLabels:
+      app: booking-db-init
   template:
     metadata:
       labels:
