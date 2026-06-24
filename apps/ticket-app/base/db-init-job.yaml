@@ -5,10 +5,10 @@ metadata:
   namespace: ticketing
   labels:
     app: booking-db-init
+  annotations:
+    argocd.argoproj.io/hook: Sync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
 spec:
-  selector:
-    matchLabels:
-      app: booking-db-init
   template:
     metadata:
       labels:
