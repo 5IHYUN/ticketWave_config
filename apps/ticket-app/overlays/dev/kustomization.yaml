@@ -19,3 +19,6 @@ images:
   - name: ticket-service
     newName: 194722398200.dkr.ecr.ap-northeast-2.amazonaws.com/team5-dev-app
     newTag: dev-bf99ef7
+
+patchesStrategicMerge:
+  - deployment-patch.yaml
