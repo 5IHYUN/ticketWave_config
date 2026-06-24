@@ -14,3 +14,6 @@ spec:
               value: prod
             - name: QUEUE_TOKEN_BYPASS
               value: "false"
+            - name: AWS_S3_POSTER_BUCKET
+              value: team5-prod-poster-bucket
+

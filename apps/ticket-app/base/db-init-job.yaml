@@ -5,8 +5,14 @@ metadata:
   namespace: ticketing
   labels:
     app: booking-db-init
+  annotations:
+    argocd.argoproj.io/hook: Sync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
 spec:
   template:
+    metadata:
+      labels:
+        app: booking-db-init
     spec:
       serviceAccountName: ticket-service
       containers:
