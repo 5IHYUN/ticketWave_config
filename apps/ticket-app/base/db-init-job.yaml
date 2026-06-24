@@ -27,5 +27,7 @@ spec:
               value: dev,db-init
             - name: SPRING_CLOUD_AWS_REGION_STATIC
               value: ap-northeast-2
+            - name: SPRING_MAIN_WEB_APPLICATION_TYPE
+              value: none
       restartPolicy: OnFailure
   backoffLimit: 2

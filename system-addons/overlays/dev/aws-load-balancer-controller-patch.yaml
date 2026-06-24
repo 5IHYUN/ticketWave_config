@@ -12,3 +12,4 @@ spec:
         serviceAccount:
           create: true
           name: aws-load-balancer-controller
+        enableGatewayAPI: true

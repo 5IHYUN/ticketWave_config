@@ -23,4 +23,4 @@ images:
 
 patches:
   - path: deployment-patch.yaml
-  - path: ingress-patch.yaml
+  - path: httproute-patch.yaml

@@ -4,6 +4,7 @@ resources:
   - deployment.yaml
   - service.yaml
   - serviceaccount.yaml
-  - ingress.yaml
+  - gateway.yaml
+  - httproute.yaml
   - db-init-job.yaml
 
