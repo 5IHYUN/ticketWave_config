@@ -7,6 +7,9 @@ metadata:
     app: booking-db-init
 spec:
   template:
+    metadata:
+      labels:
+        app: booking-db-init
     spec:
       serviceAccountName: ticket-service
       containers:
