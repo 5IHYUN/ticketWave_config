@@ -20,10 +20,9 @@ spec:
   pollingInterval: 10 # 10초마다 큐 길이 확인
   cooldownPeriod: 120 # 마지막 트리거 후 120초 뒤 축소
   triggers:
-    - type: aws-sqs-queue
+    - type: prometheus
       metadata:
-        queueURL: "https://sqs.ap-northeast-2.amazonaws.com/194722398200/team5-prod-booking-queue.fifo"
-        awsRegion: "ap-northeast-2"
-        queueLength: "5" # Pod당 목표 메시지 수 (부하테스트 시나리오2로 튜닝)
-        activationQueueLength: "1" # 0→1 스케일 임계 (min 0일 때 의미)
-        identityOwner: operator # keda-operator IRSA 자격증명 사용
+        serverAddress: http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090
+        metricName: aws_sqs_approximate_number_of_messages_visible_average
+        query: sum(aws_sqs_approximate_number_of_messages_visible_average{dimension_QueueName="team5-prod-booking-queue.fifo"})
+        threshold: "5"
