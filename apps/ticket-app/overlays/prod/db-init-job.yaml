@@ -1,0 +1,35 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ticket-db-init
+  namespace: ticketing
+  labels:
+    app: booking-db-init
+  annotations:
+    argocd.argoproj.io/hook: Sync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+spec:
+  template:
+    metadata:
+      labels:
+        app: booking-db-init
+    spec:
+      serviceAccountName: ticket-service
+      containers:
+        - name: db-init
+          image: ticket-service
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - secretRef:
+                name: ticket-app-secret
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: prod,db-init
+            - name: SPRING_CLOUD_AWS_REGION_STATIC
+              value: ap-northeast-2
+            - name: SPRING_MAIN_WEB_APPLICATION_TYPE
+              value: none
+            - name: SPRING_CLOUD_AWS_SQS_ENABLED
+              value: "false"
+      restartPolicy: OnFailure
+  backoffLimit: 2

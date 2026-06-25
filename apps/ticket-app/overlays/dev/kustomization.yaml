@@ -3,6 +3,7 @@ kind: Kustomization
 resources:
   - externalsecret.yaml
   - ../../base
+  - db-init-job.yaml
 
   # worker 워크로드
   - deployment-booking-worker.yaml
