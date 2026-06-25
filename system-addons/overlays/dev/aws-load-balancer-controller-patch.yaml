@@ -15,4 +15,4 @@ spec:
         controllerConfig:
           featureGates:
             ALBGatewayAPI: true
-            NLBGatewayAPI: true
+            NLBGatewayAPI: false
