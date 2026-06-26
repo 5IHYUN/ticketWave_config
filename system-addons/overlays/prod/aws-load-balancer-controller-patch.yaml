@@ -12,8 +12,9 @@ spec:
         serviceAccount:
           create: true
           name: aws-load-balancer-controller
+        installCRDs: false
         controllerConfig:
           featureGates:
             ALBGatewayAPI: true
             NLBGatewayAPI: false
-            installCRDs: false
+
