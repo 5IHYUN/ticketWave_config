@@ -29,7 +29,7 @@ spec:
           - cloud-infra.shop
 
         extraArgs:
-          zone-id-filter: Z01580172CZSVI4ZGPE76
+          - --zone-id-filter=Z01580172CZSVI4ZGPE76
 
   destination:
     server: https://kubernetes.default.svc
