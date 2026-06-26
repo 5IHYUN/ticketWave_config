@@ -1,0 +1,9 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: alb
+spec:
+  parametersRef:
+    group: elbv2.k8s.aws
+    kind: GatewayClassParams
+    name: alb-prod-params
