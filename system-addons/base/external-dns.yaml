@@ -22,6 +22,9 @@ spec:
 
         txtOwnerId: team5-ticketing
 
+        sources:
+          - gateway-httproute
+
         domainFilters:
           - cloud-infra.shop
 
