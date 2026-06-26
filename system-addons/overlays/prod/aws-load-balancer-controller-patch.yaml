@@ -16,3 +16,4 @@ spec:
           featureGates:
             ALBGatewayAPI: true
             NLBGatewayAPI: false
+            installCRDs: false

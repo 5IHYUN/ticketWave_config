@@ -16,14 +16,25 @@ spec:
   ignoreDifferences:
     - group: apps
       kind: Deployment
-      name: booking-worker      # KEDA(SQS 적체)가 replicas 관리
+      name: booking-worker # KEDA(SQS 적체)가 replicas 관리
       jsonPointers:
         - /spec/replicas
     - group: apps
       kind: Deployment
-      name: ticket-service      # HPA(CPU)가 replicas 관리
+      name: ticket-service # HPA(CPU)가 replicas 관리
       jsonPointers:
         - /spec/replicas
+    #AWS 컨트롤러가 실시간으로 주입하는 Status와 Annotation 무시
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      jsonPointers:
+        - /status
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      jsonPointers:
+        - /status
+        - /metadata/annotations
+
   syncPolicy:
     automated: { prune: true, selfHeal: true }
-    syncOptions: [ CreateNamespace=true ]
+    syncOptions: [CreateNamespace=true]
