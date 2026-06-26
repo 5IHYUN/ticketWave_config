@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: ticket-service
+  namespace: ticketing
+  annotations:
+    alb.ingress.kubernetes.io/target-type: ip  # 👈 진짜로 이 주석이 필요했던 위치
