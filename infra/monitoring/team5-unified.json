@@ -222,13 +222,280 @@
     },
     {
       "type": "row",
+      "title": "1-B. 대기열 진입(enter) 병목 진단 — 트랙 B 부하테스트 전용",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 17
+      },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "title": "enter vs hold p99 (30s window)",
+      "description": "빨강 enter가 초록 hold보다 위로 튀면 synchronized 락 병목. enter가 1초 주기 톱니면 promoteQueues 간섭.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 18
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "showPoints": "never"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "enter p99"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "hold p99"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "green"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "max",
+            "mean"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(http_server_requests_seconds_bucket{uri=\"/api/v1/shows/{showId}/queue/enter\",method=\"POST\"}[30s])))",
+          "legendFormat": "enter p99"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(http_server_requests_seconds_bucket{uri=\"/api/v1/seats/{seatId}/hold\",method=\"POST\"}[30s])))",
+          "legendFormat": "hold p99"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "enter _max (구간 실측 최댓값 — promote 피크 직격)",
+      "description": "histogram_quantile은 버킷으로 뭉개지지만 _max는 구간 raw 최댓값. promote가 락 잡은 순간 피크가 톱니로 찍힌다.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 18
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 15,
+            "lineWidth": 1,
+            "showPoints": "auto",
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "max by (uri) (http_server_requests_seconds_max{uri=\"/api/v1/shows/{showId}/queue/enter\",method=\"POST\"})",
+          "legendFormat": "enter max"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "enter 처리율 RPS + pod 수 (직렬화 한계)",
+      "description": "VU를 올려도 RPS가 평평하면 락 직렬화 처리율 한계. pod 수(HPA)가 늘 때 천장이 올라가면 파드 스코프 락이 수평 확장으로 완화됨을 증명.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 27
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "max",
+            "mean"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(rate(http_server_requests_seconds_count{uri=\"/api/v1/shows/{showId}/queue/enter\",method=\"POST\"}[15s]))",
+          "legendFormat": "enter rps (total)"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "count(count by (pod) (http_server_requests_seconds_count{uri=\"/api/v1/shows/{showId}/queue/enter\"}))",
+          "legendFormat": "pod 수 (HPA)"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "enter status 분포 (대기열 throttle 동작 증거)",
+      "description": "WAITING 응답이 늘면 대기열이 hold 폭주를 막고 있다는 증거. status별 처리율.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 27
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 20,
+            "lineWidth": 1,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "normal"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "mean"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (status) (rate(http_server_requests_seconds_count{uri=\"/api/v1/shows/{showId}/queue/enter\",method=\"POST\"}[30s]))",
+          "legendFormat": "status {{status}}"
+        }
+      ]
+    },
+    {
+      "type": "row",
       "title": "2. 비동기 백엔드 처리 (SQS 큐 & 워커 오토스케일링)",
       "collapsed": false,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 17
+        "y": 35
       },
       "id": 101,
       "panels": []
@@ -245,7 +512,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 18
+        "y": 36
       },
       "fieldConfig": {
         "defaults": {
@@ -290,7 +557,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 18
+        "y": 36
       },
       "fieldConfig": {
         "defaults": {
@@ -331,7 +598,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 26
+        "y": 44
       },
       "fieldConfig": {
         "defaults": {
@@ -376,7 +643,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 26
+        "y": 44
       },
       "fieldConfig": {
         "defaults": {
@@ -417,7 +684,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 34
+        "y": 52
       },
       "id": 102,
       "panels": []
@@ -434,7 +701,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 35
+        "y": 53
       },
       "fieldConfig": {
         "defaults": {
@@ -479,7 +746,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 35
+        "y": 53
       },
       "fieldConfig": {
         "defaults": {
@@ -524,7 +791,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 43
+        "y": 61
       },
       "fieldConfig": {
         "defaults": {
@@ -569,7 +836,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 43
+        "y": 61
       },
       "fieldConfig": {
         "defaults": {
