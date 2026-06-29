@@ -4,4 +4,4 @@ metadata:
   name: ticket-gateway
   namespace: ticketing
   annotations:
-    alb.ingress.kubernetes.io/wafv2-acl-arn: "PLACEHOLDER_WAF_ACL_ARN"
+    alb.ingress.kubernetes.io/wafv2-acl-arn: "arn:aws:wafv2:ap-northeast-2:194722398200:regional/webacl/team5-prod-waf/c5be3268-6aa8-40e7-957f-6f17a602a326"
