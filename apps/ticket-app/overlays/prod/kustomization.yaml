@@ -19,7 +19,7 @@ resources:
 images:
   - name: ticket-service
     newName: 194722398200.dkr.ecr.ap-northeast-2.amazonaws.com/team5-prod-app
-    newTag: prod-a00fd1b
+    newTag: prod-f9f8cfe
 
 patches:
   - path: deployment-patch.yaml
