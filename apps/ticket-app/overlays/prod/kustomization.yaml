@@ -11,10 +11,10 @@ resources:
 
   # Observability / autoscaling manifests added by the observability owner.
   # Keep these resources registered so Prometheus/KEDA settings are not dropped.
-  - scaledobject-booking-worker.yaml
-  - servicemonitor-booking.yaml
+  # - servicemonitor-booking.yaml
   - hpa.yaml
-  - gateway-class-params.yaml #인터넷 공객망 파라미터
+  # - gateway-class-params.yaml #인터넷 공객망 파라미터
+
 
 images:
   - name: ticket-service
