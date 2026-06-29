@@ -7,4 +7,3 @@ spec:
     group: elbv2.k8s.aws
     kind: GatewayClassParams
     name: alb-prod-params
-    namespace: ticketing
