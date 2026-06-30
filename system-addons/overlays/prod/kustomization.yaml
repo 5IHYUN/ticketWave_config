@@ -5,6 +5,7 @@ resources:
   - keda.yaml
   - yace.yaml
   - cluster-autoscaler.yaml
+  - kube-prometheus-stack-app.yaml
   - kube-prometheus-stack.yaml
   - alertmanager-slack-externalsecret.yaml
   - metrics-server.yaml
