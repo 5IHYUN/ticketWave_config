@@ -3,6 +3,7 @@ kind: GatewayClass
 metadata:
   name: alb
 spec:
+  controllerName: gateway.k8s.aws/alb
   parametersRef:
     group: gateway.k8s.aws
     kind: LoadBalancerConfiguration
