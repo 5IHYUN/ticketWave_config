@@ -22,5 +22,6 @@ images:
 patches:
   - path: deployment-patch.yaml
   - path: httproute-patch.yaml
+  - path: gateway-class-patch.yaml
   - path: service-patch.yaml
   - path: gateway-waf-patch.yaml
