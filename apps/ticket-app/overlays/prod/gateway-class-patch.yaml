@@ -5,6 +5,6 @@ metadata:
 spec:
   parametersRef:
     group: elbv2.k8s.aws
-    kind: GatewayClassParams
-    name: alb-prod-params
+    kind: LoadBalancerConfiguration
+    name: ticket-gateway-config
     namespace: ticketing
