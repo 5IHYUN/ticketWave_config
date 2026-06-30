@@ -39,6 +39,10 @@ spec:
             enabled: true
             ingressClassName: alb
             annotations:
+              # 공유 AWS 계정에서 다른 팀의 monitoring/grafana Ingress와 ALB 이름이 충돌하는 문제 회피
+              # 기본 생성 규칙 k8s-{ns}-{name}-{hash}가 32자 제한으로 잘려 �돌 발생.
+              # team5 고유 이름(20자)으로 명시 지정하여 �돌 원천 차단.
+              alb.ingress.kubernetes.io/load-balancer-name: t5-prod-grafana-alb
               alb.ingress.kubernetes.io/scheme: internet-facing
               alb.ingress.kubernetes.io/target-type: ip
               alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80}]'
