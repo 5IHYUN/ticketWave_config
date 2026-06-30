@@ -1,0 +1,13 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base
+  - keda.yaml
+  - yace.yaml
+  - cluster-autoscaler.yaml
+  - kube-prometheus-stack.yaml
+  - metrics-server.yaml
+  - alertmanager-slack-externalsecret.yaml
+patches:
+  - path: aws-load-balancer-controller-patch.yaml
+

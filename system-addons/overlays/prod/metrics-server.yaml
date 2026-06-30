@@ -1,0 +1,37 @@
+# metrics-server — HPA가 Pod CPU/메모리 사용률을 읽기 위한 필수 애드온.
+# 없으면 HPA TARGETS가 <unknown> 으로 떠서 스케일 판단 자체를 못 함.
+# (EKS는 기본 미설치라 직접 넣어야 함. KEDA/YACE와 동일한 Application 패턴.)
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: metrics-server
+  namespace: argocd
+spec:
+  project: default
+
+  source:
+    repoURL: https://kubernetes-sigs.github.io/metrics-server/
+    chart: metrics-server
+    targetRevision: 3.12.2          # ← 최신 차트 버전 확인 후 조정 가능
+    helm:
+      values: |
+        args:
+          # EKS의 kubelet serving 인증서가 cluster CA로 서명되지 않아
+          # metrics-server가 kubelet에 TLS 연결 못 하는 문제 방지 (EKS 필수)
+          - --kubelet-insecure-tls
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kube-system
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

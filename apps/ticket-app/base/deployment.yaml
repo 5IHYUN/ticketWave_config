@@ -1,0 +1,73 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ticket-service
+  namespace: ticketing
+  labels:
+    app: booking
+    app.kubernetes.io/name: ticket-service
+    app.kubernetes.io/part-of: team5-ticket
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ticket-service
+  template:
+    metadata:
+      labels:
+        app: booking
+        app.kubernetes.io/name: ticket-service
+        app.kubernetes.io/part-of: team5-ticket
+    spec:
+      serviceAccountName: ticket-service
+      containers:
+        - name: ticket-service
+          # kustomization.yaml의 images 설정이 실제 ECR image/tag로 치환
+          image: ticket-service
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+
+          # ExternalSecret이 생성한 Kubernetes Secret을 Spring Boot 환경변수로 주입
+          envFrom:
+            - secretRef:
+                name: ticket-app-secret
+
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: dev
+            - name: SPRING_CLOUD_AWS_REGION_STATIC
+              value: ap-northeast-2
+            # ⚠️ 부하테스트(A 방식) 전용: 큐토큰 검증 우회.
+            # 측정 끝나면 "false"로 되돌리거나 제거.
+            - name: QUEUE_TOKEN_BYPASS
+              value: "true"
+
+          # Actuator 기반 기본 헬스체크.
+          # 앱 설정에서 probe endpoint가 비활성화되어 있으면 /actuator/health로 조정 필요
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: http
+            initialDelaySeconds: 60
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 6
+
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: http
+            initialDelaySeconds: 60
+            periodSeconds: 20
+            timeoutSeconds: 3
+            failureThreshold: 3
+
+          resources:
+            requests:
+              cpu: "300m"
+              memory: "512Mi"
+            limits:
+              cpu: "1000m"
+              memory: "1Gi"

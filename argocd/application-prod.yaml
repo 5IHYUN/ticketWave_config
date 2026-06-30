@@ -1,0 +1,46 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: ticket-app-prod
+  namespace: argocd
+spec:
+  project: team5-project
+  source:
+    repoURL: https://github.com/CLD-05/team5-ticket-config.git
+    targetRevision: develop
+    path: apps/ticket-app/overlays/prod
+  destination:
+    server: https://33B04B27DCF1DEFCA301C9EEE79D24BA.gr7.ap-northeast-2.eks.amazonaws.com
+    namespace: ticketing
+  # 오토스케일러가 관리하는 replicas는 ArgoCD drift 검사에서 제외 (selfHeal 충돌 방지)
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      name: booking-worker # KEDA(SQS 적체)가 replicas 관리
+      jsonPointers:
+        - /spec/replicas
+    - group: apps
+      kind: Deployment
+      name: ticket-service # HPA(CPU)가 replicas 관리
+      jsonPointers:
+        - /spec/replicas
+    #AWS 컨트롤러가 실시간으로 주입하는 Status와 Annotation 무시
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      jsonPointers:
+        - /status
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      jsonPointers:
+        - /status
+        - /metadata/annotations
+    - group: gateway.networking.k8s.io
+      kind: GatewayClass
+      name: alb
+      jsonPointers:
+        - /spec/controllerName
+
+  syncPolicy:
+    automated: { prune: true, selfHeal: true }
+    syncOptions: [CreateNamespace=true, SkipSchemaValidation=true]
+

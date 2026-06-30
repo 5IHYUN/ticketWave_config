@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: ticket-service
+  namespace: ticketing
+  annotations:
+    alb.ingress.kubernetes.io/target-type: ip
+spec:
+  type: NodePort

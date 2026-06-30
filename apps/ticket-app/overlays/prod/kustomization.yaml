@@ -1,0 +1,27 @@
+# overlays/prod/kustomization.yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - externalsecret.yaml
+  - ../../base
+
+  # worker 워크로드
+  - deployment-booking-worker.yaml
+  - service-booking-worker.yaml
+
+  # Observability / autoscaling manifests added by the observability owner.
+  # Keep these resources registered so Prometheus/KEDA settings are not dropped.
+  - servicemonitor-booking.yaml
+  - hpa.yaml
+
+images:
+  - name: ticket-service
+    newName: 194722398200.dkr.ecr.ap-northeast-2.amazonaws.com/team5-prod-app
+    newTag: prod-2be4a3d
+
+patches:
+  - path: deployment-patch.yaml
+  - path: httproute-patch.yaml
+  - path: gateway-class-patch.yaml
+  - path: service-patch.yaml
+  - path: gateway-waf-patch.yaml

@@ -1,0 +1,62 @@
+# system-addons/yace.yaml  (신규)
+# YACE(yet-another-cloudwatch-exporter): CloudWatch의 SQS 메트릭을 긁어
+# Prometheus가 scrape 할 수 있는 /metrics로 노출.
+# -> aws_sqs_approximate_number_of_messages_visible_average 같은 시계열 생성
+#    (kube-prometheus-stack의 serviceMonitorSelectorNilUsesHelmValues:false 덕에 자동 발견)
+#
+# ⚠️ chart 버전은 helm search repo yet-another-cloudwatch-exporter 로 최신 확인 후 고정 권장.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: yace
+  namespace: argocd
+spec:
+  project: default
+
+  source:
+    repoURL: https://prometheus-community.github.io/helm-charts
+    chart: prometheus-yet-another-cloudwatch-exporter
+    targetRevision: 0.45.0            # ← 최신 버전으로 확인 후 조정
+    helm:
+      values: |
+        nameOverride: yet-another-cloudwatch-exporter
+        serviceAccount:
+          create: true
+          name: yace                  # terraform var.yace_service_account 와 일치
+          annotations:
+            # ↓ terraform output yace_irsa_role_arn 값으로 치환 (전체 ARN)
+            eks.amazonaws.com/role-arn: arn:aws:iam::194722398200:role/team5-ticket-dev-yace-cw
+        # Prometheus가 YACE를 scrape 하도록 ServiceMonitor 생성
+        serviceMonitor:
+          enabled: true
+        # YACE가 무엇을 긁을지 정의 (CloudWatch AWS/SQS)
+        config: |
+          apiVersion: v1alpha1
+          sts-region: ap-northeast-2          # ← 리전 치환
+          discovery:
+            jobs:
+              - type: AWS/SQS
+                regions:
+                  - ap-northeast-2            # ← 리전 치환
+                period: 60
+                length: 300
+                metrics:
+                  - name: ApproximateNumberOfMessagesVisible
+                    statistics: [Average, Maximum]
+                  - name: ApproximateAgeOfOldestMessage
+                    statistics: [Maximum]
+                  - name: NumberOfMessagesSent
+                    statistics: [Sum]
+                  - name: NumberOfMessagesDeleted
+                    statistics: [Sum]
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring               # IRSA trust의 SA 네임스페이스와 일치
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
