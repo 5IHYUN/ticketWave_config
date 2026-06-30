@@ -13,9 +13,6 @@ resources:
   # Keep these resources registered so Prometheus/KEDA settings are not dropped.
   - servicemonitor-booking.yaml
   - hpa.yaml
-  - gateway-class-params.yaml #인터넷 공객망 파라미터
-
-
 
 images:
   - name: ticket-service
@@ -25,6 +22,5 @@ images:
 patches:
   - path: deployment-patch.yaml
   - path: httproute-patch.yaml
-  - path: gateway-class-patch.yaml #클래스 연결 패치
   - path: service-patch.yaml
   - path: gateway-waf-patch.yaml
