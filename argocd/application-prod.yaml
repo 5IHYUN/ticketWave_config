@@ -34,6 +34,11 @@ spec:
       jsonPointers:
         - /status
         - /metadata/annotations
+    - group: gateway.networking.k8s.io
+      kind: GatewayClass
+      name: alb
+      jsonPointers:
+        - /spec/controllerName
 
   syncPolicy:
     automated: { prune: true, selfHeal: true }

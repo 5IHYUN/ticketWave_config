@@ -3,13 +3,15 @@ kind: Service
 metadata:
   name: ticket-service
   namespace: ticketing
+  annotations:
+    alb.ingress.kubernetes.io/target-type: ip
   labels:
     # ServiceMonitor가 app=booking 라벨을 기준으로 scrape 대상을 찾음
     app: booking
     app.kubernetes.io/name: ticket-service
     app.kubernetes.io/part-of: team5-ticket
 spec:
-  type: ClusterIP
+  type: NodePort
   selector:
     app.kubernetes.io/name: ticket-service
   ports:

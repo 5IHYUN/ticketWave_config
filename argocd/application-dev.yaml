@@ -24,6 +24,11 @@ spec:
       name: ticket-service      # HPA(CPU)가 replicas 관리
       jsonPointers:
         - /spec/replicas
+    - group: gateway.networking.k8s.io
+      kind: GatewayClass
+      name: alb
+      jsonPointers:
+        - /spec/controllerName
   syncPolicy:
     automated: { prune: true, selfHeal: true }
     syncOptions: [ CreateNamespace=true ]
