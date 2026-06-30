@@ -4,7 +4,7 @@ metadata:
   name: alb
 spec:
   parametersRef:
-    group: elbv2.k8s.aws
+    group: gateway.k8s.aws
     kind: LoadBalancerConfiguration
     name: ticket-gateway-config
     namespace: ticketing
