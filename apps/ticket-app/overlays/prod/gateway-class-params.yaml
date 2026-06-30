@@ -1,8 +1,0 @@
-apiVersion: elbv2.k8s.aws/v1beta1
-kind: GatewayClassParams
-metadata:
-  name: alb-prod-params
-  namespace: ticketing
-spec:
-  scheme: internet-facing  # 👈 internal 격리를 해제
-  ipAddressType: ipv4
