@@ -1,0 +1,7 @@
+apiVersion: gateway.k8s.aws/v1beta1
+kind: LoadBalancerConfiguration
+metadata:
+  name: ticket-gateway-config
+  namespace: ticketing
+spec:
+  scheme: internet-facing
