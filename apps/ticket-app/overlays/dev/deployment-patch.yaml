@@ -1,4 +1,4 @@
-# dev 환경용 override: dev 기본값을 prod 값으로 덮음 (env는 name 기준 merge)
+# dev 환경용 override (env는 name 기준 merge)
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -11,7 +11,7 @@ spec:
         - name: ticket-service
           env:
             - name: SPRING_PROFILES_ACTIVE
-              value: prod
+              value: dev
             - name: QUEUE_TOKEN_BYPASS
               value: "false"
             - name: AWS_S3_POSTER_BUCKET

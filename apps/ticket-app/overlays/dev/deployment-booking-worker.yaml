@@ -34,7 +34,7 @@ spec:
                 name: ticket-app-secret
           env:
             - name: SPRING_PROFILES_ACTIVE
-              value: prod,worker                # worker 프로파일 = @SqsListener 활성
+              value: dev,worker                # worker 프로파일 = @SqsListener 활성
             - name: SPRING_CLOUD_AWS_REGION_STATIC
               value: ap-northeast-2
           readinessProbe:
