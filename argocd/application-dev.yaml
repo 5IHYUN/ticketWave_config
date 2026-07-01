@@ -7,7 +7,7 @@ spec:
   project: team5-project
   source:
     repoURL: https://github.com/CLD-05/team5-ticket-config.git
-    targetRevision: develop
+    targetRevision: main
     path: apps/ticket-app/overlays/dev
   destination:
     server: https://kubernetes.default.svc
