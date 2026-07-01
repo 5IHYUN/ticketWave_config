@@ -5,3 +5,8 @@ metadata:
   namespace: ticketing
 spec:
   scheme: internet-facing
+  tags:
+    Environment: prod
+    Team: team5
+    Project: ticket-platform
+    Owner: team5
