@@ -24,7 +24,7 @@ spec:
                 name: ticket-app-secret
           env:
             - name: SPRING_PROFILES_ACTIVE
-              value: prod,db-init
+              value: dev,db-init
             - name: SPRING_CLOUD_AWS_REGION_STATIC
               value: ap-northeast-2
             - name: SPRING_MAIN_WEB_APPLICATION_TYPE
