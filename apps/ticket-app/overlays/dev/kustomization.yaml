@@ -12,7 +12,6 @@ resources:
   # Keep these resources registered so Prometheus/KEDA settings are not dropped.
   - scaledobject-booking-worker.yaml
   - servicemonitor-booking.yaml
-  - prometheusrule-booking.yaml
   - hpa.yaml
 
 images:
