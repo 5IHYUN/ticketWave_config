@@ -22,3 +22,4 @@ images:
 
 patchesStrategicMerge:
   - deployment-patch.yaml
+  - gateway-class-patch.yaml
