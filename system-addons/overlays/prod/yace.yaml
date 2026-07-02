@@ -49,6 +49,24 @@ spec:
                     statistics: [Sum]
                   - name: NumberOfMessagesDeleted
                     statistics: [Sum]
+              - type: AWS/ElastiCache
+                regions:
+                  - ap-northeast-2
+                period: 60
+                length: 300
+                metrics:
+                  - name: EngineCPUUtilization
+                    statistics: [Average, Maximum]
+                  - name: CPUUtilization
+                    statistics: [Maximum]
+                  - name: CurrConnections
+                    statistics: [Average, Maximum]
+                  - name: NewConnections
+                    statistics: [Sum]
+                  - name: DatabaseMemoryUsagePercentage
+                    statistics: [Maximum]
+                  - name: CacheHitRate
+                    statistics: [Average]
 
   destination:
     server: https://kubernetes.default.svc
