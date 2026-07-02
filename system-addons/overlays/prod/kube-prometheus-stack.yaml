@@ -23,7 +23,7 @@
 #             -> threshold 교체 PR -> burn-rate alert 신뢰 가능.
 #
 # ⚠️ repo 에 있다 != 클러스터에 떠있다.
-#    - ArgoCD targetRevision=develop. develop 머지 후 ticket-app-prod Application
+#    - ArgoCD targetRevision=main. main 머지 후 ticket-app-prod Application
 #      이 sync 돼야 반영됨. (system-addons-prod 의 Prometheus 가 떠 있어야 함.)
 #    - apply 후 prod Prometheus /api/v1/rules 에서 booking.sli / slo_budget /
 #      alerts 3그룹이 health=ok 로 로드됐는지, 각 record 에 값이 찍히는지

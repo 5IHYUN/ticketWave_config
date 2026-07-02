@@ -43,6 +43,9 @@ spec:
             # 측정 끝나면 "false"로 되돌리거나 제거.
             - name: QUEUE_TOKEN_BYPASS
               value: "true"
+            # 대기열 진입(enter)이 Redis 왕복으로 스레드를 오래 점유 → 대량 부하 대비 상향
+            - name: SERVER_TOMCAT_THREADS_MAX
+              value: "400"
 
           # Actuator 기반 기본 헬스체크.
           # 앱 설정에서 probe endpoint가 비활성화되어 있으면 /actuator/health로 조정 필요
@@ -52,8 +55,10 @@ spec:
               port: http
             initialDelaySeconds: 60
             periodSeconds: 10
-            timeoutSeconds: 3
-            failureThreshold: 6
+            # 대량 부하 시 톰캣 스레드가 요청에 묶여 probe 지연 → 5s/10회로 여유
+            # (5000 VU 측정에서 probe 3s가 파드 재시작을 유발한 결과 반영)
+            timeoutSeconds: 5
+            failureThreshold: 10
 
           livenessProbe:
             httpGet:
@@ -61,8 +66,9 @@ spec:
               port: http
             initialDelaySeconds: 60
             periodSeconds: 20
-            timeoutSeconds: 3
-            failureThreshold: 3
+            # 부하 중 probe 스레드 굶주림으로 인한 오탐 재시작 방지 (5000 VU 측정 기반)
+            timeoutSeconds: 5
+            failureThreshold: 5
 
           resources:
             requests:

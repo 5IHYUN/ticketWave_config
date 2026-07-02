@@ -18,7 +18,7 @@
 #    (자=측정 메커니즘은 지금 박고, 목표 숫자 N 은 데이터로 확정)
 #
 # ⚠️ repo 에 있다 != 클러스터에 떠있다.
-#    - ArgoCD targetRevision=main 이므로 develop 머지만으로는 sync 안 됨.
+#    - ArgoCD targetRevision=main 이므로 main 머지 후 sync됨.
 #    - apply 후 Prometheus UI 에서 각 record 시계열이 실제로 값이 찍히는지
 #      (No data / 0 고정 아닌지) 반드시 확인. (과거 'confiremd' 오타 교훈)
 # =====================================================================

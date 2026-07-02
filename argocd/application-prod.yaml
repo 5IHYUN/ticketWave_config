@@ -7,7 +7,7 @@ spec:
   project: team5-project
   source:
     repoURL: https://github.com/CLD-05/team5-ticket-config.git
-    targetRevision: develop
+    targetRevision: main
     path: apps/ticket-app/overlays/prod
   destination:
     server: https://33B04B27DCF1DEFCA301C9EEE79D24BA.gr7.ap-northeast-2.eks.amazonaws.com
@@ -43,4 +43,3 @@ spec:
   syncPolicy:
     automated: { prune: true, selfHeal: true }
     syncOptions: [CreateNamespace=true, SkipSchemaValidation=true]
-
