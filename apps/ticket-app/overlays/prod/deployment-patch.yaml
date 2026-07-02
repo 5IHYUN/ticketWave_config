@@ -9,6 +9,18 @@ spec:
     spec:
       containers:
         - name: ticket-service
+          # 5만 부하 대비 리소스 상향 (base: req 300m/limit 1000m → prod override)
+          # request 500m: 스케줄링 기준. 12파드 × 500m = 6core → t3.large×8(16core) 내 안전.
+          # limit 1500m: 파드당 버스트 상한. t3.large 2core 중 시스템 몫 남기고 1.5core까지 허용.
+          #   (base 1000m에서 enter가 CPU 포화(998m) 관측됨 → 상향으로 파드당 처리율 확보)
+          # ⚠️ 노드가 t3.large(버스터블)라 정점 지속 시 크레딧 소진 가능 → 측정 결과 해석에 반영.
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "512Mi"
+            limits:
+              cpu: "1500m"
+              memory: "1Gi"
           env:
             - name: SPRING_PROFILES_ACTIVE
               value: prod
@@ -16,4 +28,3 @@ spec:
               value: "false"
             - name: AWS_S3_POSTER_BUCKET
               value: team5-prod-poster-bucket
-
