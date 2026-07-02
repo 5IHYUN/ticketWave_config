@@ -9,7 +9,7 @@ spec:
     kind: Deployment
     name: ticket-service
   minReplicas: 3        # prod 상시 floor (dev 1과 다름, 유지)
-  maxReplicas: 8        # prod ceiling (dev 5와 다름, 유지)
+  maxReplicas: 12        # prod ceiling (dev 5와 다름, 유지)
   metrics:
     - type: Resource
       resource:
