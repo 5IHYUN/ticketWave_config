@@ -37,6 +37,8 @@ spec:
               value: dev,worker                # worker 프로파일 = @SqsListener 활성
             - name: SPRING_CLOUD_AWS_REGION_STATIC
               value: ap-northeast-2
+            - name: SPRING_DATASOURCE_URL
+              value: jdbc:mysql://team5-dev-rds.cx482c6a63zp.ap-northeast-2.rds.amazonaws.com:3306/ticketing?useUnicode=true&allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
           readinessProbe:
             httpGet: { path: /actuator/health/readiness, port: http }
             initialDelaySeconds: 30
