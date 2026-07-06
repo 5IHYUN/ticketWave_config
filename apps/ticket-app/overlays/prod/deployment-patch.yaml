@@ -18,12 +18,21 @@ spec:
           #        파드당 실질 CPU 2배 확보. 15파드 → 8노드 분산(노드 max 15 내 안전).
           # [limit] 2000m: 노드당 2파드 × 2000m = 4core 딱 맞음(오버커밋 없음).
           # ⚠️ 배포 후 재부하로 enter p95(60s 캡)/process_cpu 재측정 필수.
+          # ⚠️ 이제훈(노드/CA)과 노드 분산 확인 후 머지.
           resources:
+            # === CPU throttle 해제 (2026-07-06 v2) ===
+            # [발견] container_cpu 1.99를 "2코어 연산 포화"로 오판했으나, 실측
+            #        cfs_throttled 비율 max 0.99 → limit 2000m에 질식(throttle)이 진짜 원인.
+            #        노드 CPU는 0~3%인데 파드만 100% = limit이 조인 것(연산 부족 아님).
+            # [처방] requests 3000m → 노드당 1파드 배치(4core÷3000m=1). 파드당 4코어 확보.
+            #        limit 3800m(노드 4core 중 시스템 몫 200m 남김) → throttle 해제.
+            #        15파드 × 1노드 = 15노드 필요(app-ng max 15 딱 맞음).
+            # ⚠️ 재부하로 cfs_throttled → 0, enter p95 60s 캡 깨는지 검증.
             requests:
-              cpu: "1500m"
+              cpu: "3000m"
               memory: "512Mi"
             limits:
-              cpu: "2000m"
+              cpu: "3800m"
               memory: "1Gi"
           env:
             - name: SPRING_PROFILES_ACTIVE
