@@ -539,7 +539,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "aws_sqs_approximate_number_of_messages_visible_average{dimension_QueueName=\"team5-dev-booking-queue\"}",
+          "expr": "aws_sqs_approximate_number_of_messages_visible_average{dimension_QueueName=\"team5-prod-booking-queue.fifo\"}",
           "legendFormat": "queue depth",
           "refId": "A"
         }
@@ -728,7 +728,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum by (job) (process_cpu_usage{job=~\"ticket-service|team5-dev-booking-worker\"})",
+          "expr": "sum by (job) (process_cpu_usage{job=~\"ticket-service|team5-prod-booking-worker\"})",
           "legendFormat": "{{job}}",
           "refId": "A"
         }
@@ -818,7 +818,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum by (job) (jvm_memory_used_bytes{area=\"heap\", job=~\"ticket-service|team5-dev-booking-worker\"})",
+          "expr": "sum by (job) (jvm_memory_used_bytes{area=\"heap\", job=~\"ticket-service|team5-prod-booking-worker\"})",
           "legendFormat": "{{job}}",
           "refId": "A"
         }
@@ -1097,6 +1097,53 @@
           "refId": "B"
         }
       ]
+    },
+    {
+      "type": "timeseries",
+      "title": "CPU Throttle 비율 (limit 질식 진단)",
+      "id": 210,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 70
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10
+          },
+          "max": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "rate(container_cpu_cfs_throttled_periods_total{namespace=\"ticketing\",container=\"ticket-service\"}[1m]) / rate(container_cpu_cfs_periods_total{namespace=\"ticketing\",container=\"ticket-service\"}[1m])",
+          "legendFormat": "{{pod}}",
+          "refId": "A"
+        }
+      ],
+      "description": "container_cpu_cfs_throttled 비율. 0.5+ 지속이면 CPU limit이 파드를 조이는 것(연산부족 아님). process_cpu_usage와 반드시 교차확인."
     }
   ]
 }
