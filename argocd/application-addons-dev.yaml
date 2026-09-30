@@ -6,7 +6,7 @@ metadata:
 spec:
   project: team5-project
   source:
-    repoURL: https://github.com/CLD-05/team5-ticket-config.git
+    repoURL: https://github.com/5IHYUN/ticketWave_config.git
     targetRevision: main
     path: system-addons/overlays/dev
   destination:
