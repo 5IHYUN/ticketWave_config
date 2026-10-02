@@ -1,0 +1,123 @@
+# system-addons/overlays/dev/kube-prometheus-stack-app.yaml
+# Prometheus Operator 본체(kube-prometheus-stack chart) ArgoCD Application (dev)
+#
+# 기존 dev overlay에 차트 Application 누락 (prod에만 복구본 존재)
+#   → dev에서 Prometheus Operator 미설치 → PrometheusRule·ServiceMonitor CRD 없음
+#   → system-addons-dev / ticket-app Application sync 실패 원인
+# prod 복구본 기준, dev 운영 방식(검증일에만 생성·삭제)에 맞춰 조정
+#   - 저장소: PVC 없음 (emptyDir). 클러스터 삭제 시 PVC 정리 누락 → EBS 잔존 비용 방지
+#     실험 데이터는 캡처·export로 보존
+#   - Grafana Ingress 없음 → kubectl port-forward 접속 (ALB 비용·외부 노출 제거)
+#   - Watchdog·InfoInhibitor는 null 수신자로 라우팅 (상시 발화 알림의 Slack 노이즈 제거)
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kube-prometheus-stack
+  namespace: argocd
+spec:
+  project: default
+
+  source:
+    repoURL: https://prometheus-community.github.io/helm-charts
+    chart: kube-prometheus-stack
+    targetRevision: 61.7.2            # prod와 동일 버전
+    helm:
+      values: |
+        # EKS 관리형 control plane 메트릭 미노출 → 해당 기본 알림은 항상 오탐, 비활성
+        defaultRules:
+          create: true
+          rules:
+            kubeSchedulerAlerting: false
+            kubeControllerManager: false
+            etcd: false
+            kubeProxy: false
+        kubeControllerManager:
+          enabled: false
+        kubeScheduler:
+          enabled: false
+        kubeEtcd:
+          enabled: false
+        kubeProxy:
+          enabled: false
+
+        grafana:
+          enabled: true
+          persistence:
+            enabled: false
+          # 대시보드: infra/monitoring ConfigMap(grafana_dashboard="1")을 사이드카가 자동 임포트
+          sidecar:
+            dashboards:
+              enabled: true
+              label: grafana_dashboard
+              labelValue: "1"
+          # 접속: kubectl -n monitoring port-forward svc/kube-prometheus-stack-grafana 3000:80
+          # admin 비밀번호: kubectl -n monitoring get secret kube-prometheus-stack-grafana -o jsonpath='{.data.admin-password}' | base64 -d
+
+        prometheus:
+          prometheusSpec:
+            retention: 2d               # 검증일 단위 사용, 장기 보존 불필요
+            scrapeInterval: 15s
+            evaluationInterval: 15s
+            resources:
+              requests:
+                cpu: 200m
+                memory: 768Mi
+              limits:
+                memory: 1536Mi
+            # 모든 네임스페이스의 ServiceMonitor·PrometheusRule 자동 발견 (ticketing ns 포함)
+            serviceMonitorSelectorNilUsesHelmValues: false
+            ruleSelectorNilUsesHelmValues: false
+            podMonitorSelectorNilUsesHelmValues: false
+            probeSelectorNilUsesHelmValues: false
+
+        alertmanager:
+          alertmanagerSpec:
+            secrets:
+              - alertmanager-slack      # alertmanager-slack-externalsecret.yaml
+          config:
+            route:
+              receiver: slack-default
+              group_by: ["alertname", "severity"]
+              group_wait: 30s
+              group_interval: 5m
+              repeat_interval: 4h
+              routes:
+                # 상시 발화(파이프라인 생존 확인용) 알림 → Slack 미전송
+                - matchers:
+                    - alertname =~ "Watchdog|InfoInhibitor"
+                  receiver: "null"
+                - matchers:
+                    - severity = "critical"
+                  receiver: slack-critical
+            receivers:
+              - name: "null"
+              - name: slack-default
+                slack_configs:
+                  - api_url_file: /etc/alertmanager/secrets/alertmanager-slack/webhook-url
+                    send_resolved: true
+                    title: '[DEV][{{ .Status | toUpper }}] {{ .CommonLabels.alertname }}'
+                    text: >-
+                      {{ range .Alerts }}*{{ .Annotations.summary }}*
+                      {{ .Annotations.description }}
+                      {{ end }}
+              - name: slack-critical
+                slack_configs:
+                  - api_url_file: /etc/alertmanager/secrets/alertmanager-slack/webhook-url-critical
+                    send_resolved: true
+                    title: '[DEV][{{ .Status | toUpper }}] {{ .CommonLabels.alertname }}'
+                    text: >-
+                      {{ range .Alerts }}*{{ .Annotations.summary }}*
+                      {{ .Annotations.description }}
+                      {{ end }}
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true            # 대용량 CRD 처리

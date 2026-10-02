@@ -5,9 +5,9 @@ resources:
   - keda.yaml
   - yace.yaml
   - cluster-autoscaler.yaml
-  - kube-prometheus-stack.yaml
+  - kube-prometheus-stack-app.yaml   # Prometheus Operator 본체 (기존 dev 누락)
+  - prometheusrule-booking.yaml      # booking SLO·알림 규칙 (구 kube-prometheus-stack.yaml)
   - metrics-server.yaml
   - alertmanager-slack-externalsecret.yaml
 patches:
   - path: aws-load-balancer-controller-patch.yaml
-

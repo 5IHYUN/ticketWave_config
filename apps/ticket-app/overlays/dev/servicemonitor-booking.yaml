@@ -11,6 +11,9 @@ kind: ServiceMonitor
 metadata:
   name: booking
   namespace: ticketing
+  annotations:
+    # ServiceMonitor CRD는 kube-prometheus-stack 설치 후 생성 → 첫 sync dry-run 실패 방지
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
 spec:
   selector:
     matchLabels:
