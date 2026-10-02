@@ -1,28 +1,50 @@
-# booking-queue 적체량 기준으로 Worker Pod를 오토스케일.
-# 데시드 Pod 수 = ceil(메시지 수 / queueLength)
-#   예) 메시지 50, queueLength 5 -> 10 Pod
+# booking-worker 오토스케일 (KEDA aws-sqs-queue 스케일러)
+# 목표 Pod 수 = ceil((visible + in_flight 메시지 수) / queueLength)
+#   예) 메시지 50, queueLength 5 → 10 Pod (min 1 ~ max 20)
 #
-# 사전 조건:
-#   1) keda-operator ServiceAccount에 IRSA role-arn annotation 적용 (terraform output 값)
-#   2) identityOwner: operator -> operator의 IRSA 자격증명 사용
+# 변경: prometheus 트리거 → aws-sqs-queue 트리거 (analysis/05 #3)
+#   - 기존 sum(aws_sqs_..._visible_average)에 YACE 시계열 + Worker Pod별 앱 게이지 동시 포함
+#     → Pod N개일 때 적체 (N+1)배 집계 → 과대 스케일 (앱 게이지는 booking_sqs_messages로 분리 완료)
+#   - YACE 경유값은 CloudWatch 1분 단위 + 수집 지연 → 급증 반응 느림
+#   - 스케일 판단을 관측 파이프라인(CloudWatch → YACE → Prometheus)과 분리
+#     Prometheus 장애 시에도 Worker 확장 유지
+#   - KEDA operator IRSA(sqs:GetQueueAttributes, infra modules/monitoring)는 이 스케일러용으로 이미 존재
 #
-# ↓↓↓ 치환 필요 항목 (실제 값으로 반드시 교체) ↓↓↓
+# ⚠️ 계정 종속 값: queueURL의 계정 ID는 새 계정 apply 후 교체
 apiVersion: keda.sh/v1alpha1
 kind: ScaledObject
 metadata:
   name: booking-worker
-  namespace: ticketing # 서비스 네임스페이스 (config repo 확인 결과)
+  namespace: ticketing
+  annotations:
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true   # KEDA CRD 설치 전 dry-run 실패 방지
 spec:
   scaleTargetRef:
-    name: booking-worker # ← ⚠️ 실제 Worker Deployment 이름으로 치환 (env/dev/ticket-service에 워커 매니페스트가 아직 없음)
-  minReplicaCount: 1 # scale-to-zero 원하면 0 (첫 메시지 cold start 감수)
+    name: booking-worker
+  minReplicaCount: 1        # scale-to-zero 미사용 (첫 메시지 cold start 회피)
   maxReplicaCount: 20
-  pollingInterval: 15 # 15초마다 큐 길이 확인
-  cooldownPeriod: 120 # 마지막 트리거 후 120초 뒤 축소
+  pollingInterval: 15       # 15초마다 큐 길이 확인
+  cooldownPeriod: 120       # 마지막 트리거 후 120초 뒤 축소
   triggers:
-    - type: prometheus
+    - type: aws-sqs-queue
+      authenticationRef:
+        name: keda-aws-operator
       metadata:
-        serverAddress: http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090
-        metricName: aws_sqs_approximate_number_of_messages_visible_average
-        query: sum(aws_sqs_approximate_number_of_messages_visible_average{dimension_QueueName="team5-dev-booking-queue"})
-        threshold: "5"
+        queueURL: https://sqs.ap-northeast-2.amazonaws.com/YOUR_AWS_ACCOUNT_ID/team5-dev-booking-queue
+        queueLength: "5"          # Pod 1개당 목표 메시지 수
+        awsRegion: ap-northeast-2
+        scaleOnInFlight: "true"   # 처리 중 메시지 포함 (처리 지연 시 축소 방지)
+---
+# KEDA operator ServiceAccount의 IRSA 자격 증명 사용
+#   (keda.yaml serviceAccount.operator role-arn = terraform output keda_irsa_role_arn)
+apiVersion: keda.sh/v1alpha1
+kind: TriggerAuthentication
+metadata:
+  name: keda-aws-operator
+  namespace: ticketing
+  annotations:
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+spec:
+  podIdentity:
+    provider: aws
+    identityOwner: keda

@@ -37,8 +37,12 @@ spec:
               value: dev,worker                # worker 프로파일 = @SqsListener 활성
             - name: SPRING_CLOUD_AWS_REGION_STATIC
               value: ap-northeast-2
-            - name: SPRING_DATASOURCE_URL
-              value: jdbc:mysql://team5-dev-rds.cx482c6a63zp.ap-northeast-2.rds.amazonaws.com:3306/ticketing?useUnicode=true&allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+            # DLQ 적체량 메트릭(booking_sqs_messages{queue="dlq"})용, 큐 이름으로 URL 조회
+            - name: AWS_SQS_BOOKING_DLQ_URL
+              value: team5-dev-booking-dlq
+            # SPRING_DATASOURCE_URL 하드코딩 제거
+            #   기존: 옛 계정 RDS 엔드포인트 직접 지정 → envFrom Secret 값(RDS Proxy 경유)을 덮어씀
+            #   변경: API와 동일하게 ticket-app-secret(team5/dev/ticket-app) 값 사용
           readinessProbe:
             httpGet: { path: /actuator/health/readiness, port: http }
             initialDelaySeconds: 30

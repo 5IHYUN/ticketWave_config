@@ -2,3 +2,6 @@ tmp/
 
 # IDE
 .idea/
+
+# scripts/extract-rules.sh 생성물
+build/

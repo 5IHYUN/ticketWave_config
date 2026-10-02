@@ -1,5 +1,7 @@
 # =====================================================================
 # booking 도메인 SLO / 알림 규칙  (dev)
+# 파일명 변경: kube-prometheus-stack.yaml → prometheusrule-booking.yaml
+#   (차트 설치는 kube-prometheus-stack-app.yaml, 이 파일은 규칙만 정의)
 # ---------------------------------------------------------------------
 # 설계 원칙 (멘토 피드백 반영):
 #   - 절대값 임계("p99 > 5s") 가 아니라 "위반 빈도 + 에러버짓" 기반.
@@ -27,6 +29,9 @@ kind: PrometheusRule
 metadata:
   name: booking-slo
   namespace: ticketing
+  annotations:
+    # PrometheusRule CRD는 kube-prometheus-stack 설치 후 생성 → 첫 sync dry-run 실패 방지
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
 spec:
   groups:
     # =================================================================
@@ -47,19 +52,21 @@ spec:
             histogram_quantile(0.99,
               sum by (le) (rate(http_server_requests_seconds_bucket{uri="/api/v1/seats/{seatId}/hold", method="POST"}[2m])))
 
-        # bad=1 / good=0. threshold 300ms.
+        # bad=1 / good=0.
+        # ⚠️ 기존 주석 300ms ↔ 실제 식 0.7(700ms) 불일치 (analysis/05 #1)
+        #    값은 유지, 3-2 SLO 재산정 시 baseline 근거로 확정
         - record: booking:seathold_latency:bad_window
           expr: booking:seathold_latency_p99_seconds > bool 0.7
 
         # ---- (비동기) 큐 나이 = 가장 오래 대기 중인 메시지 나이(초) ----
         # YACE 가 ApproximateAgeOfOldestMessage(Maximum) 를 이미 수집 중.
         # 게이지라 항상 존재(큐 비면 0). count 가 아니라 'age' 가 우리 SLI.
-        # ⚠️ 큐 이름 .fifo 여부 불확실(FIFO 마이그레이션 중간 상태) →
-        #    dimension_QueueName 을 정확매칭 대신 regex(=~)로 .fifo 유무 양쪽 매칭.
-        #    apply 후 Prometheus 에서 실제 라벨값 확인하고 필요시 좁힐 것.
+        # 큐 이름 .fifo 여부 대응: regex(=~)로 .fifo 유무 양쪽 매칭
+        #   (기존: 주석은 regex, 실제 식은 정확 매칭 → FIFO 전환 시 No data로 알림 영구 미발생, analysis/05 #2)
+        #   현재 Terraform dev는 표준 큐(fifo_queue=false)
         - record: booking:queue_age_seconds:max
           expr: |
-            max(aws_sqs_approximate_age_of_oldest_message_maximum{dimension_QueueName="team5-dev-booking-queue"})
+            max(aws_sqs_approximate_age_of_oldest_message_maximum{dimension_QueueName=~"team5-dev-booking-queue(\\.fifo)?"})
 
         # bad=1 / good=0. threshold 60s.
         # (KEDA pollingInterval 15s + cooldown 120s 반응 lag 흡수 위해 60s. 시나리오2로 30s 조이기 검토)
@@ -210,7 +217,7 @@ spec:
         # SLO 는 위의 '큐 나이'. 이건 KEDA 가 backlog 를 따라잡고 있는지 보는 운영 신호.
         - alert: BookingQueueBacklogHigh
           expr: |
-            max(aws_sqs_approximate_number_of_messages_visible_maximum{dimension_QueueName="team5-dev-booking-queue"}) > 500
+            max(aws_sqs_approximate_number_of_messages_visible_maximum{dimension_QueueName=~"team5-dev-booking-queue(\\.fifo)?"}) > 500
           for: 3m
           labels:
             severity: warning
