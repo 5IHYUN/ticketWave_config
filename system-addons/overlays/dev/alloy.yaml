@@ -1,0 +1,110 @@
+# system-addons/overlays/dev/alloy.yaml
+# Grafana Alloy (로그 수집기) — ticketing 네임스페이스 Pod 로그 → Loki
+#   - 로컬 observability/alloy/config.alloy와 같은 처리 단계 (JSON 파싱, level 라벨, 앱 timestamp 사용)
+#   - 로컬과 같은 라벨 service="ticket-service" → 로컬에서 쓰던 LogQL 그대로 사용
+#   - 추가 라벨: namespace, app(ticket-service | booking-worker), pod, container
+#     requestId·bookingRequestId 등 고유 값은 라벨 대신 LogQL `| json`으로 검색 (저카디널리티 유지)
+#   - Kubernetes API로 로그 수집(loki.source.kubernetes) → hostPath 마운트 불필요
+#     DaemonSet이면 모든 Pod가 같은 로그를 중복 수집 → Deployment 1개로 운영
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: alloy
+  namespace: argocd
+spec:
+  project: default
+
+  source:
+    repoURL: https://grafana.github.io/helm-charts
+    chart: alloy
+    targetRevision: 1.7.0
+    helm:
+      values: |
+        controller:
+          type: deployment
+          replicas: 1
+
+        alloy:
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 512Mi
+          configMap:
+            create: true
+            content: |
+              // 1) ticketing 네임스페이스 Pod 탐색
+              discovery.kubernetes "pods" {
+                role = "pod"
+                namespaces {
+                  names = ["ticketing"]
+                }
+              }
+
+              // 2) Kubernetes 메타데이터 → 라벨
+              discovery.relabel "pods" {
+                targets = discovery.kubernetes.pods.targets
+
+                rule {
+                  source_labels = ["__meta_kubernetes_namespace"]
+                  target_label  = "namespace"
+                }
+                rule {
+                  source_labels = ["__meta_kubernetes_pod_label_app_kubernetes_io_name"]
+                  target_label  = "app"
+                }
+                rule {
+                  source_labels = ["__meta_kubernetes_pod_name"]
+                  target_label  = "pod"
+                }
+                rule {
+                  source_labels = ["__meta_kubernetes_pod_container_name"]
+                  target_label  = "container"
+                }
+              }
+
+              // 3) Kubernetes API로 Pod 로그 수집
+              loki.source.kubernetes "pods" {
+                targets    = discovery.relabel.pods.output
+                forward_to = [loki.process.app.receiver]
+              }
+
+              // 4) JSON 파싱 → level 라벨, 로그 시각을 앱 timestamp로 통일 (로컬과 동일)
+              loki.process "app" {
+                stage.json {
+                  expressions = {
+                    level     = "level",
+                    timestamp = "timestamp",
+                  }
+                }
+                stage.labels {
+                  values = { level = "" }
+                }
+                stage.timestamp {
+                  source = "timestamp"
+                  format = "RFC3339Nano"
+                }
+                stage.static_labels {
+                  values = { service = "ticket-service" }
+                }
+                forward_to = [loki.write.default.receiver]
+              }
+
+              // 5) Loki 전송
+              loki.write "default" {
+                endpoint {
+                  url = "http://loki.monitoring.svc.cluster.local:3100/loki/api/v1/push"
+                }
+              }
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

@@ -1,0 +1,86 @@
+# system-addons/overlays/dev/loki.yaml
+# Loki (로그 저장소) — dev 단일 바이너리 구성
+#   - 로컬 docker compose 구성과 동일한 스키마(tsdb v13), 라벨 체계 유지 → LogQL 쿼리 공용
+#   - 저장소: filesystem + PVC 없음(emptyDir). 클러스터 삭제 시 EBS 잔존 비용 방지, 검증일 단위 운영
+#   - 캐시(memcached)·카나리·게이트웨이 비활성 → t3.medium 노드 자원 절약
+#   - 수집: alloy.yaml → http://loki.monitoring.svc.cluster.local:3100
+#   - 조회: Grafana 데이터소스 uid=loki (kube-prometheus-stack-app.yaml)
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: loki
+  namespace: argocd
+spec:
+  project: default
+
+  source:
+    repoURL: https://grafana.github.io/helm-charts
+    chart: loki
+    targetRevision: 6.30.1
+    helm:
+      values: |
+        deploymentMode: SingleBinary
+
+        loki:
+          auth_enabled: false            # 단일 테넌트 (X-Scope-OrgID 불필요)
+          commonConfig:
+            replication_factor: 1
+          storage:
+            type: filesystem
+          schemaConfig:
+            configs:
+              - from: "2024-04-01"
+                store: tsdb
+                object_store: filesystem
+                schema: v13
+                index:
+                  prefix: loki_index_
+                  period: 24h
+          limits_config:
+            retention_period: 48h        # 검증일 단위, Prometheus retention 2d와 동일
+          compactor:
+            retention_enabled: true
+            delete_request_store: filesystem
+
+        singleBinary:
+          replicas: 1
+          persistence:
+            enabled: false
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 1Gi
+
+        # SingleBinary 외 컴포넌트 미사용
+        backend:
+          replicas: 0
+        read:
+          replicas: 0
+        write:
+          replicas: 0
+        gateway:
+          enabled: false
+        chunksCache:
+          enabled: false
+        resultsCache:
+          enabled: false
+        lokiCanary:
+          enabled: false
+        test:
+          enabled: false
+        minio:
+          enabled: false
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
