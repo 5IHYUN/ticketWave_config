@@ -14,4 +14,15 @@ spec:
     namespace: argocd
   syncPolicy:
     automated: { prune: true, selfHeal: true }
-    syncOptions: [ CreateNamespace=true ]
+    syncOptions:
+      - CreateNamespace=true
+      # CRD(External Secrets·Gateway API·KEDA·Prometheus 등)가 같은 sync에서 설치되기 전
+      # 이를 사용하는 리소스의 dry-run 실패로 전체 sync가 막히는 문제 방지 (빈 클러스터 최초 배포)
+      - SkipDryRunOnMissingResource=true
+    # 자동 sync는 같은 커밋에서 실패하면 재시도하지 않음 → CRD 설치 대기 동안 재시도
+    retry:
+      limit: 10
+      backoff:
+        duration: 30s
+        factor: 2
+        maxDuration: 5m
