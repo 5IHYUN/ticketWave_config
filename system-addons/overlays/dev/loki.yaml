@@ -46,6 +46,14 @@ spec:
           replicas: 1
           persistence:
             enabled: false
+          # PVC 미사용 시 /var/loki 마운트 없음 + 루트 파일시스템 읽기 전용
+          #   → "mkdir /var/loki: read-only file system"으로 기동 실패 → emptyDir 직접 마운트
+          extraVolumes:
+            - name: loki-data
+              emptyDir: {}
+          extraVolumeMounts:
+            - name: loki-data
+              mountPath: /var/loki
           resources:
             requests:
               cpu: 100m
