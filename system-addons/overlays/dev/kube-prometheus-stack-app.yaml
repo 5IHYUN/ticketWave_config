@@ -50,6 +50,13 @@ spec:
               enabled: true
               label: grafana_dashboard
               labelValue: "1"
+          # Loki 데이터소스 (uid 고정 → 로컬 Grafana와 같은 uid, 대시보드 JSON 공용)
+          additionalDataSources:
+            - name: Loki
+              uid: loki
+              type: loki
+              access: proxy
+              url: http://loki.monitoring.svc.cluster.local:3100
           # 접속: kubectl -n monitoring port-forward svc/kube-prometheus-stack-grafana 3000:80
           # admin 비밀번호: kubectl -n monitoring get secret kube-prometheus-stack-grafana -o jsonpath='{.data.admin-password}' | base64 -d
 

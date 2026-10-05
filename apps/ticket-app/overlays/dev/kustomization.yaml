@@ -8,6 +8,10 @@ resources:
   - deployment-booking-worker.yaml
   - service-booking-worker.yaml
 
+  # 더미 공연·좌석 생성 (Argo Sync hook, DummyDataInitializer는 공연 존재 시 생략 → 반복 실행 안전)
+  #   기존 dev 목록 누락 → 새 계정 RDS에 공연 데이터 없음 → k6 setup 실패
+  - db-init-job.yaml
+
   # Observability / autoscaling manifests added by the observability owner.
   # Keep these resources registered so Prometheus/KEDA settings are not dropped.
   - scaledobject-booking-worker.yaml
