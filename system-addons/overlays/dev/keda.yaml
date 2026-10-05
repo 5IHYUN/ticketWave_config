@@ -15,7 +15,7 @@ spec:
         serviceAccount:
           operator:
             annotations:
-              eks.amazonaws.com/role-arn: arn:aws:iam::194722398200:role/team5-ticket-dev-keda-sqs
+              eks.amazonaws.com/role-arn: arn:aws:iam::733048623829:role/team5-ticket-dev-keda-sqs   # terraform output keda_irsa_role_arn
 
   destination:
     server: https://kubernetes.default.svc
