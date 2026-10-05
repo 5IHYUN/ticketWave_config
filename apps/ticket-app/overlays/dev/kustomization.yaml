@@ -20,8 +20,8 @@ resources:
 
 images:
   - name: ticket-service
-    newName: 194722398200.dkr.ecr.ap-northeast-2.amazonaws.com/team5-dev-app
-    newTag: dev-9c3258b
+    newName: 733048623829.dkr.ecr.ap-northeast-2.amazonaws.com/team5-dev-app   # terraform output ecr_repository_url
+    newTag: dev-20261005   # Day 1 빌드 이미지 (app main, linux/amd64)
 
 patchesStrategicMerge:
   - deployment-patch.yaml

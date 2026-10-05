@@ -25,7 +25,7 @@ spec:
           name: yace                  # terraform var.yace_service_account 와 일치
           annotations:
             # ↓ terraform output yace_irsa_role_arn 값으로 치환 (전체 ARN)
-            eks.amazonaws.com/role-arn: arn:aws:iam::194722398200:role/team5-ticket-dev-yace-cw
+            eks.amazonaws.com/role-arn: arn:aws:iam::733048623829:role/team5-ticket-dev-yace-cw   # terraform output yace_irsa_role_arn
         # Prometheus가 YACE를 scrape 하도록 ServiceMonitor 생성
         serviceMonitor:
           enabled: true

@@ -10,7 +10,7 @@
 #     Prometheus 장애 시에도 Worker 확장 유지
 #   - KEDA operator IRSA(sqs:GetQueueAttributes, infra modules/monitoring)는 이 스케일러용으로 이미 존재
 #
-# ⚠️ 계정 종속 값: queueURL의 계정 ID는 새 계정 apply 후 교체
+# queueURL: terraform output sqs_booking_queue_url
 apiVersion: keda.sh/v1alpha1
 kind: ScaledObject
 metadata:
@@ -30,7 +30,7 @@ spec:
       authenticationRef:
         name: keda-aws-operator
       metadata:
-        queueURL: https://sqs.ap-northeast-2.amazonaws.com/YOUR_AWS_ACCOUNT_ID/team5-dev-booking-queue
+        queueURL: https://sqs.ap-northeast-2.amazonaws.com/733048623829/team5-dev-booking-queue
         queueLength: "5"          # Pod 1개당 목표 메시지 수
         awsRegion: ap-northeast-2
         scaleOnInFlight: "true"   # 처리 중 메시지 포함 (처리 지연 시 축소 방지)
