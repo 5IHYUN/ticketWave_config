@@ -16,3 +16,16 @@ spec:
               value: "false"
             - name: AWS_S3_POSTER_BUCKET
               value: ticketwave-dev-poster-5ihyun   # infra envs/dev/infra/s3.tf 버킷 이름과 일치 (옛 팀 버킷 이름 충돌 방지)
+          # 콜드 스타트 지연 완화 조정 (analysis/12) — hpa.yaml 목표치(50→70%)와 묶은 1건의 조정
+          #   근거: AWS baseline(analysis/09) 스케일아웃 시 새 Pod JVM 워밍업 중 CPU throttling 약 0.9
+          #         → hold p95 93 → 148 → 193ms 회차별 악화
+          #   1) CPU request 300m → 500m: 실사용에 가깝게, HPA 기준(request × 목표%) 현실화·노드 배치 보장
+          #   2) CPU limit 1 core → 제거(null): 워밍업 중 CFS throttling 제거, 노드 여유 CPU로 빠르게 워밍업
+          #   메모리는 limit 유지 (초과 시 OOM 종료 → 상한 필요)
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "512Mi"
+            limits:
+              cpu: null
+              memory: "1Gi"
