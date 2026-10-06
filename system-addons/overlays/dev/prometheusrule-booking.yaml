@@ -323,7 +323,8 @@ spec:
         # AWS baseline: pending 전 구간 0 → 0 초과 자체가 이상 신호
         # 잠정값: 시나리오 2(DB 풀 고갈) 결과로 기준(> 0 / for 1m) 재판단
         - alert: DbConnectionPending
-          expr: max by (pod) (hikaricp_connections_pending{namespace="ticketing"}) > 0
+          # pod(클러스터)·instance(로컬 compose) 라벨 모두 유지 → 어느 환경이든 대상 식별 (로컬 검증 시 pod 공란 발견)
+          expr: max by (pod, instance) (hikaricp_connections_pending{namespace="ticketing"}) > 0
           for: 1m
           labels:
             severity: warning
@@ -332,7 +333,7 @@ spec:
             scenario: db-pool
             threshold: provisional
           annotations:
-            summary: "DB 커넥션 대기 발생 ({{ $labels.pod }})"
+            summary: "DB 커넥션 대기 발생 ({{ if $labels.pod }}{{ $labels.pod }}{{ else }}{{ $labels.instance }}{{ end }})"
             description: "커넥션 대기 스레드 {{ $value }}개 (1분 지속)"
             impact: "해당 Pod의 DB 사용 요청 지연, 지속 시 타임아웃 오류"
             runbook_url: "https://github.com/5IHYUN/ticketWave_config/blob/main/docs/runbooks/db-pool-exhaustion.md"
