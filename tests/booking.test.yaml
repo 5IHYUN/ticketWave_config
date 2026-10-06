@@ -1,0 +1,218 @@
+# 알림 규칙 단위 테스트 (promtool)
+#   대상: system-addons/overlays/dev/prometheusrule-booking.yaml (booking.symptoms 그룹)
+#   실행: ./scripts/test-rules.sh  (규칙 추출 → promtool test rules)
+#   확인 내용: 발화 조건·for 지속 시간·라벨·메시지 표준 annotations, 오탐 방지(정상·순간 스파이크)
+rule_files:
+- ../build/rules/booking.rules.yaml
+evaluation_interval: 1m
+tests:
+- name: 좌석 선점 p99 500ms → 3분 후 SeatHoldLatencyHigh
+  interval: 1m
+  input_series:
+  - series: http_server_requests_seconds_bucket{uri="/api/v1/seats/{seatId}/hold",method="POST",le="0.1"}
+    values: 0+0x20
+  - series: http_server_requests_seconds_bucket{uri="/api/v1/seats/{seatId}/hold",method="POST",le="0.3"}
+    values: 0+0x20
+  - series: http_server_requests_seconds_bucket{uri="/api/v1/seats/{seatId}/hold",method="POST",le="0.5"}
+    values: 0+60x20
+  - series: http_server_requests_seconds_bucket{uri="/api/v1/seats/{seatId}/hold",method="POST",le="+Inf"}
+    values: 0+60x20
+  alert_rule_test:
+  - eval_time: 3m
+    alertname: SeatHoldLatencyHigh
+  - eval_time: 10m
+    alertname: SeatHoldLatencyHigh
+    exp_alerts:
+    - exp_labels:
+        severity: warning
+        team: team5
+        category: symptom
+        threshold: provisional
+      exp_annotations:
+        summary: 좌석 선점 p99 300ms 초과 (3분 지속)
+        description: 현재 좌석 선점 p99 498ms
+        impact: 좌석 선택 직후 응답 지연, 선점 실패 체감 가능
+        runbook_url: https://github.com/5IHYUN/ticketWave_config/blob/main/docs/runbooks/seat-hold-latency.md
+        dashboard: http://localhost:3000/d/booking-pipeline
+        logql: '{namespace="ticketing"} | json | event="http.request" | path=~"/api/v1/seats/.*/hold"'
+- name: 좌석 선점 정상(100ms 이하) → 알림 없음
+  interval: 1m
+  input_series:
+  - series: http_server_requests_seconds_bucket{uri="/api/v1/seats/{seatId}/hold",method="POST",le="0.1"}
+    values: 0+60x20
+  - series: http_server_requests_seconds_bucket{uri="/api/v1/seats/{seatId}/hold",method="POST",le="0.3"}
+    values: 0+60x20
+  - series: http_server_requests_seconds_bucket{uri="/api/v1/seats/{seatId}/hold",method="POST",le="0.5"}
+    values: 0+60x20
+  - series: http_server_requests_seconds_bucket{uri="/api/v1/seats/{seatId}/hold",method="POST",le="+Inf"}
+    values: 0+60x20
+  alert_rule_test:
+  - eval_time: 10m
+    alertname: SeatHoldLatencyHigh
+- name: 큐 대기 p95 약 10초 + 적체 150건 → BookingQueueWaitHigh, BookingBacklogGrowing
+  interval: 1m
+  input_series:
+  - series: booking_queue_wait_seconds_bucket{namespace="ticketing",le="1"}
+    values: 0+0x20
+  - series: booking_queue_wait_seconds_bucket{namespace="ticketing",le="5"}
+    values: 0+0x20
+  - series: booking_queue_wait_seconds_bucket{namespace="ticketing",le="10"}
+    values: 0+30x20
+  - series: booking_queue_wait_seconds_bucket{namespace="ticketing",le="+Inf"}
+    values: 0+30x20
+  - series: booking_sqs_messages{namespace="ticketing",pod="booking-worker-a",queue="main",state="visible"}
+    values: 150x20
+  - series: booking_sqs_messages{namespace="ticketing",pod="booking-worker-b",queue="main",state="visible"}
+    values: 150x20
+  alert_rule_test:
+  - eval_time: 1m
+    alertname: BookingQueueWaitHigh
+  - eval_time: 10m
+    alertname: BookingQueueWaitHigh
+    exp_alerts:
+    - exp_labels:
+        severity: critical
+        team: team5
+        category: symptom
+        scenario: worker-delay
+      exp_annotations:
+        summary: 예약 큐 대기 p95 5초 초과 (2분 지속)
+        description: 현재 큐 대기 p95 9.75s (메시지 생성 → Worker 수신)
+        impact: 예약 결과(확정) 응답 지연, 결과 폴링 증가
+        runbook_url: https://github.com/5IHYUN/ticketWave_config/blob/main/docs/runbooks/worker-delay.md
+        dashboard: http://localhost:3000/d/booking-pipeline
+        logql: '{namespace="ticketing"} | json | event="worker.received" | queueWaitMs > 5000'
+  - eval_time: 10m
+    alertname: BookingBacklogGrowing
+    exp_alerts:
+    - exp_labels:
+        severity: warning
+        team: team5
+        category: cause
+        scenario: worker-delay
+      exp_annotations:
+        summary: booking-queue 대기 메시지 100건 초과 (2분 지속)
+        description: 현재 대기 150건 — Worker 처리량 < 유입량
+        impact: 적체가 이어지면 큐 대기·확정 지연으로 확대
+        runbook_url: https://github.com/5IHYUN/ticketWave_config/blob/main/docs/runbooks/worker-delay.md
+        dashboard: http://localhost:3000/d/booking-pipeline
+        logql: '{namespace="ticketing"} | json | event="worker.processed" | processMs > 500'
+- name: Worker 완전 정지(수신 없음) → 큐 대기 알림은 없음, 적체 알림이 감지
+  interval: 1m
+  input_series:
+  - series: booking_queue_wait_seconds_bucket{namespace="ticketing",le="1"}
+    values: 0+0x20
+  - series: booking_queue_wait_seconds_bucket{namespace="ticketing",le="5"}
+    values: 0+0x20
+  - series: booking_queue_wait_seconds_bucket{namespace="ticketing",le="10"}
+    values: 0+0x20
+  - series: booking_queue_wait_seconds_bucket{namespace="ticketing",le="+Inf"}
+    values: 0+0x20
+  - series: booking_sqs_messages{namespace="ticketing",pod="booking-worker-a",queue="main",state="visible"}
+    values: 0+20x20
+  alert_rule_test:
+  - eval_time: 10m
+    alertname: BookingQueueWaitHigh
+  - eval_time: 10m
+    alertname: BookingBacklogGrowing
+    exp_alerts:
+    - exp_labels:
+        severity: warning
+        team: team5
+        category: cause
+        scenario: worker-delay
+      exp_annotations:
+        summary: booking-queue 대기 메시지 100건 초과 (2분 지속)
+        description: 현재 대기 200건 — Worker 처리량 < 유입량
+        impact: 적체가 이어지면 큐 대기·확정 지연으로 확대
+        runbook_url: https://github.com/5IHYUN/ticketWave_config/blob/main/docs/runbooks/worker-delay.md
+        dashboard: http://localhost:3000/d/booking-pipeline
+        logql: '{namespace="ticketing"} | json | event="worker.processed" | processMs > 500'
+- name: 적체 50건 → 알림 없음
+  interval: 1m
+  input_series:
+  - series: booking_sqs_messages{namespace="ticketing",pod="booking-worker-a",queue="main",state="visible"}
+    values: 50x20
+  alert_rule_test:
+  - eval_time: 10m
+    alertname: BookingBacklogGrowing
+- name: DLQ 1건 → BookingDlqNotEmpty
+  interval: 1m
+  input_series:
+  - series: booking_sqs_messages{namespace="ticketing",pod="booking-worker-a",queue="dlq",state="visible"}
+    values: 0 0 1x20
+  alert_rule_test:
+  - eval_time: 2m
+    alertname: BookingDlqNotEmpty
+  - eval_time: 4m
+    alertname: BookingDlqNotEmpty
+    exp_alerts:
+    - exp_labels:
+        severity: critical
+        team: team5
+        category: cause
+      exp_annotations:
+        summary: booking DLQ 메시지 발생
+        description: DLQ 대기 1건 — Worker 반복 처리 실패
+        impact: 해당 예약 요청 미처리 (사용자는 결과 PROCESSING 유지)
+        runbook_url: https://github.com/5IHYUN/ticketWave_config/blob/main/docs/runbooks/worker-delay.md
+        dashboard: http://localhost:3000/d/booking-pipeline
+        logql: '{namespace="ticketing", level="ERROR"} | json'
+- name: Worker Pod 커넥션 대기 3 → DbConnectionPending(pod 라벨), 처리 p95 약 1s → WorkerProcessSlow
+  interval: 1m
+  input_series:
+  - series: hikaricp_connections_pending{namespace="ticketing",pod="booking-worker-a",pool="booking-hikari"}
+    values: 3x20
+  - series: hikaricp_connections_pending{namespace="ticketing",pod="ticket-service-a",pool="booking-hikari"}
+    values: '0x20'
+  - series: booking_worker_process_seconds_bucket{namespace="ticketing",le="0.1"}
+    values: 0+0x20
+  - series: booking_worker_process_seconds_bucket{namespace="ticketing",le="0.5"}
+    values: 0+0x20
+  - series: booking_worker_process_seconds_bucket{namespace="ticketing",le="1"}
+    values: 0+30x20
+  - series: booking_worker_process_seconds_bucket{namespace="ticketing",le="+Inf"}
+    values: 0+30x20
+  alert_rule_test:
+  - eval_time: 10m
+    alertname: DbConnectionPending
+    exp_alerts:
+    - exp_labels:
+        severity: warning
+        team: team5
+        category: cause
+        scenario: db-pool
+        threshold: provisional
+        pod: booking-worker-a
+      exp_annotations:
+        summary: DB 커넥션 대기 발생 (booking-worker-a)
+        description: 커넥션 대기 스레드 3개 (1분 지속)
+        impact: 해당 Pod의 DB 사용 요청 지연, 지속 시 타임아웃 오류
+        runbook_url: https://github.com/5IHYUN/ticketWave_config/blob/main/docs/runbooks/db-pool-exhaustion.md
+        dashboard: http://localhost:3000/d/booking-pipeline
+        logql: '{namespace="ticketing"} | json | message=~".*Connection is not available.*"'
+  - eval_time: 10m
+    alertname: WorkerProcessSlow
+    exp_alerts:
+    - exp_labels:
+        severity: warning
+        team: team5
+        category: symptom
+        scenario: db-pool
+      exp_annotations:
+        summary: Worker 예약 처리 p95 500ms 초과 (2분 지속)
+        description: 현재 처리 p95 975ms
+        impact: 예약 확정 지연, 지속 시 큐 적체로 확대
+        runbook_url: https://github.com/5IHYUN/ticketWave_config/blob/main/docs/runbooks/db-pool-exhaustion.md
+        dashboard: http://localhost:3000/d/booking-pipeline
+        logql: '{namespace="ticketing"} | json | event="worker.processed" | processMs > 500'
+- name: 커넥션 대기 순간 1회(1분 미만) → 알림 없음
+  interval: 1m
+  input_series:
+  - series: hikaricp_connections_pending{namespace="ticketing",pod="booking-worker-a",pool="booking-hikari"}
+    values: 0 0 0 2 0 0 0 0 0 0
+  alert_rule_test:
+  - eval_time: 4m
+    alertname: DbConnectionPending
+  - eval_time: 8m
+    alertname: DbConnectionPending
