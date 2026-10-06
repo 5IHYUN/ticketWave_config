@@ -47,6 +47,20 @@
         "titleFormat": "{{alertname}}",
         "textFormat": "{{severity}} {{category}}",
         "useValueForTime": false
+      },
+      {
+        "name": "장애 주입",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "enable": true,
+        "iconColor": "orange",
+        "expr": "max by (type) (fault_injected_ms) > 0",
+        "step": "10s",
+        "titleFormat": "장애 주입 {{type}}",
+        "textFormat": "FaultInjector (Redis 키 fault:*)",
+        "useValueForTime": false
       }
     ]
   },
