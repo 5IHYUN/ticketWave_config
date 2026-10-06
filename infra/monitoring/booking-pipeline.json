@@ -67,7 +67,7 @@
     {
       "type": "stat",
       "title": "예약 확정 성공률 (5m)",
-      "description": "SLO 99%, conflict(정상 거절) 제외",
+      "description": "SLO 99%, conflict(정상 거절) 제외. 예약 트래픽 없으면 0/0 → 트래픽 없음 표시",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -106,7 +106,32 @@
           },
           "color": {
             "mode": "thresholds"
-          }
+          },
+          "noValue": "트래픽 없음",
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "nan",
+                "result": {
+                  "text": "트래픽 없음",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "트래픽 없음",
+                  "color": "text",
+                  "index": 1
+                }
+              }
+            }
+          ]
         },
         "overrides": []
       },
@@ -133,7 +158,7 @@
     {
       "type": "stat",
       "title": "HTTP 5xx 비율 (5m)",
-      "description": "알림 기준 5%",
+      "description": "알림 기준 5%. 5xx 시계열이 없을 때 0으로 계산",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
@@ -144,7 +169,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum(rate(http_server_requests_seconds_count{status=~\"5..\"}[5m])) / sum(rate(http_server_requests_seconds_count[5m]))",
+          "expr": "(sum(rate(http_server_requests_seconds_count{status=~\"5..\"}[5m])) or vector(0)) / sum(rate(http_server_requests_seconds_count[5m]))",
           "legendFormat": "",
           "refId": "A",
           "range": true
@@ -172,7 +197,32 @@
           },
           "color": {
             "mode": "thresholds"
-          }
+          },
+          "noValue": "트래픽 없음",
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "nan",
+                "result": {
+                  "text": "트래픽 없음",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "트래픽 없음",
+                  "color": "text",
+                  "index": 1
+                }
+              }
+            }
+          ]
         },
         "overrides": []
       },
@@ -238,7 +288,32 @@
           },
           "color": {
             "mode": "thresholds"
-          }
+          },
+          "noValue": "트래픽 없음",
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "nan",
+                "result": {
+                  "text": "트래픽 없음",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "트래픽 없음",
+                  "color": "text",
+                  "index": 1
+                }
+              }
+            }
+          ]
         },
         "overrides": []
       },
@@ -300,7 +375,32 @@
           },
           "color": {
             "mode": "thresholds"
-          }
+          },
+          "noValue": "트래픽 없음",
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "nan",
+                "result": {
+                  "text": "트래픽 없음",
+                  "color": "text",
+                  "index": 0
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "트래픽 없음",
+                  "color": "text",
+                  "index": 1
+                }
+              }
+            }
+          ]
         },
         "overrides": []
       },
