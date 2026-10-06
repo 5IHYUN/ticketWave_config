@@ -11,6 +11,7 @@ namespace: monitoring
 configMapGenerator:
   - name: team5-grafana-dashboards
     files:
+      - booking-pipeline.json         # 장애 트리아지 대시보드 (3-3, analysis/10)
       - team5-overview.json
       - team5-sync.json
       - team5-system.json
