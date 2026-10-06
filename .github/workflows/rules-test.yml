@@ -1,0 +1,27 @@
+# 알림 규칙 변경 시 promtool 문법 검사·단위 테스트
+name: rules-test
+
+on:
+  pull_request:
+    paths:
+      - "system-addons/overlays/**/prometheusrule-*.yaml"
+      - "tests/**"
+      - "scripts/extract-rules.sh"
+      - "scripts/test-rules.sh"
+  push:
+    branches: [main]
+    paths:
+      - "system-addons/overlays/**/prometheusrule-*.yaml"
+      - "tests/**"
+
+jobs:
+  promtool:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: promtool 설치
+        run: |
+          curl -sSL https://github.com/prometheus/prometheus/releases/download/v2.54.1/prometheus-2.54.1.linux-amd64.tar.gz | tar xz
+          sudo cp prometheus-2.54.1.linux-amd64/promtool /usr/local/bin/
+      - name: 규칙 검사·테스트
+        run: bash scripts/test-rules.sh
