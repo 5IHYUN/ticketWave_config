@@ -9,7 +9,7 @@ spec:
     kind: Deployment
     name: ticket-service
   minReplicas: 1
-  maxReplicas: 5
+  maxReplicas: 3   # DB 연결 예산 (Worker 3 + API 3) x 8 = 48, 시나리오 1 용량 정합성 조정
   metrics:
     - type: Resource
       resource:

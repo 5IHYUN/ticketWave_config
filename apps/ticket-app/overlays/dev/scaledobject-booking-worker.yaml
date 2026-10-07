@@ -22,7 +22,7 @@ spec:
   scaleTargetRef:
     name: booking-worker
   minReplicaCount: 1        # scale-to-zero 미사용 (첫 메시지 cold start 회피)
-  maxReplicaCount: 20
+  maxReplicaCount: 3         # DB 연결 예산: (Worker 3 + API 3) x 풀 8 = 48 <= RDS 실측 상한 50 (시나리오 1)
   pollingInterval: 15       # 15초마다 큐 길이 확인
   cooldownPeriod: 120       # 마지막 트리거 후 120초 뒤 축소
   triggers:
