@@ -16,7 +16,10 @@ spec:
         name: cpu
         target:
           type: Utilization
-          averageUtilization: 50
+          # 50 → 70 (analysis/12, deployment-patch.yaml의 CPU request·limit 변경과 묶은 1건의 조정)
+          #   기존: request 300m × 50% = 150m → JVM 기동·워밍업 CPU만으로 최대치까지 확장
+          #   변경: request 500m × 70% = 350m → 순간 워밍업 CPU에 덜 반응, 실제 부하 기준 확장
+          averageUtilization: 70
   # 스케일 거동 정책 (flapping 방지). 팀원 PR의 behavior 블록 흡수.
   behavior:
     # 급증: 60초 관찰 후 빠르게 확장 (최대 100%↑ 또는 +4 Pod/분 중 큰 쪽)
