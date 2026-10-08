@@ -214,18 +214,9 @@ spec:
             summary: "booking 5xx 오류율 5% 초과"
             description: "현재 오류율 {{ $value | humanizePercentage }}."
 
-        # ---- 큐 적체(count) — SLO 아님. KEDA 헬스/포화 지표(유지) ----
-        # SLO 는 위의 '큐 나이'. 이건 KEDA 가 backlog 를 따라잡고 있는지 보는 운영 신호.
-        - alert: BookingQueueBacklogHigh
-          expr: |
-            max(aws_sqs_approximate_number_of_messages_visible_maximum{dimension_QueueName=~"team5-dev-booking-queue(\\.fifo)?"}) > 500
-          for: 3m
-          labels:
-            severity: warning
-            team: team5
-          annotations:
-            summary: "booking-queue 적체 500 초과 (KEDA 추적 지표, SLO 아님)"
-            description: "현재 적체 {{ $value }}건 — KEDA 스케일/노드 프로비저닝이 못 따라가는지 확인."
+        # ---- 큐 적체(count): BookingQueueBacklogHigh 제거 (2026-10-08 노이즈 조정) ----
+        # YACE(CloudWatch) 기준 > 500 → 같은 신호를 앱 게이지로 보는 BookingBacklogGrowing(> 100, 2초 갱신)과 중복
+        # 2b에서 두 알림이 함께 발화. CloudWatch 경유 1~5분 지연이라 탐지도 늦음 → 앱 게이지 알림만 유지
 
     # =================================================================
     # [그룹 4] 증상·원인 알림 — 장애 시나리오 검증용 짧은 윈도우 (3-2·3-4, analysis/10)

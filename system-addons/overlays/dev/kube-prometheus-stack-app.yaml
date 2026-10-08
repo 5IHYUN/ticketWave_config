@@ -57,6 +57,10 @@ spec:
               type: loki
               access: proxy
               url: http://loki.monitoring.svc.cluster.local:3100
+          # Grafana 자체 메트릭 ServiceMonitor: 차트 기본 scrapeTimeout 30s > 전역 scrapeInterval 15s
+          #   → Prometheus Operator가 거부 → PrometheusOperatorRejectedResources 상시 발화 (2026-10-08 확인)
+          serviceMonitor:
+            scrapeTimeout: 10s
           # 접속: kubectl -n monitoring port-forward svc/kube-prometheus-stack-grafana 3000:80
           # admin 비밀번호: kubectl -n monitoring get secret kube-prometheus-stack-grafana -o jsonpath='{.data.admin-password}' | base64 -d
 
@@ -81,9 +85,29 @@ spec:
           alertmanagerSpec:
             secrets:
               - alertmanager-slack      # alertmanager-slack-externalsecret.yaml
+          # 알림 메시지 템플릿 (2026-10-08 노이즈 조정)
+          #   - 묶음 메시지 안에서 증상 → 원인 후보 → 기타 순으로 정렬, 해제된 알림은 이름만 한 줄
+          #   - 차트가 /etc/alertmanager/config/ 에 마운트 → 아래 config.templates 경로로 로드
+          templateFiles:
+            team5.tmpl: |-
+              {{ define "team5.alert" }}*{{ .Annotations.summary }}*{{ if .Annotations.description }}
+              {{ .Annotations.description }}{{ end }}{{ if .Annotations.impact }}
+              • 영향: {{ .Annotations.impact }}{{ end }}{{ if .Labels.category }}
+              • 구분: {{ .Labels.category }}{{ if .Labels.scenario }} / {{ .Labels.scenario }}{{ end }}{{ end }}{{ if .Annotations.runbook_url }}
+              • 런북: {{ .Annotations.runbook_url }}{{ end }}{{ if .Annotations.dashboard }}
+              • 대시보드: {{ .Annotations.dashboard }}{{ end }}{{ if .Annotations.logql }}
+              • 로그: `{{ .Annotations.logql }}`{{ end }}
+              {{ end }}
+              {{ define "team5.title" }}[DEV][{{ .Status | toUpper }}{{ if eq .Status "firing" }}:{{ .Alerts.Firing | len }}{{ end }}] {{ if .CommonLabels.alertname }}{{ .CommonLabels.alertname }}{{ else }}{{ range $i, $a := .Alerts.Firing }}{{ if $i }}, {{ end }}{{ $a.Labels.alertname }}{{ end }}{{ end }}{{ end }}
+              {{ define "team5.text" }}{{ range .Alerts.Firing }}{{ if eq .Labels.category "symptom" }}[증상] {{ template "team5.alert" . }}
+              {{ end }}{{ end }}{{ range .Alerts.Firing }}{{ if eq .Labels.category "cause" }}[원인 후보] {{ template "team5.alert" . }}
+              {{ end }}{{ end }}{{ range .Alerts.Firing }}{{ if not .Labels.category }}{{ template "team5.alert" . }}
+              {{ end }}{{ end }}{{ if .Alerts.Resolved }}해제: {{ range $i, $a := .Alerts.Resolved }}{{ if $i }}, {{ end }}{{ $a.Labels.alertname }}{{ end }}{{ end }}{{ end }}
           # 알림 메시지 표준 (3-4): summary·description + 영향·구분·런북·대시보드·로그 쿼리
           #   annotations 없는 기본 규칙(kube-prometheus 기본 알림)은 해당 줄 생략
           config:
+            templates:
+              - /etc/alertmanager/config/*.tmpl
             route:
               receiver: slack-default
               group_by: ["alertname", "severity"]
@@ -95,41 +119,63 @@ spec:
                 - matchers:
                     - alertname =~ "Watchdog|InfoInhibitor"
                   receiver: "null"
+                # 예약 서비스 알림 묶음 (2026-10-08 노이즈 조정)
+                #   근거: 같은 장애에서 알림 이름마다 별도 메시지 → 시나리오 1 약 2분 사이 9종, 2b 11종 동시 발화
+                #   team·severity 단위로 묶어 한 장애 = 채널별 한 메시지 + 변경 시 갱신
+                #   group_wait 1m: 첫 알림 뒤 연쇄 발화를 모아 보냄 (탐지 알림 최대 30초 추가 지연 감수)
+                - matchers:
+                    - team = "team5"
+                  group_by: ["team", "severity"]
+                  group_wait: 1m
+                  routes:
+                    - matchers:
+                        - severity = "critical"
+                      receiver: slack-critical
                 - matchers:
                     - severity = "critical"
                   receiver: slack-critical
+            # 억제 규칙: 앞 4개는 차트 기본값 (목록은 덮어쓰기라 유지 위해 명시)
+            inhibit_rules:
+              - source_matchers: ['severity = "critical"']
+                target_matchers: ['severity =~ "warning|info"']
+                equal: ["namespace", "alertname"]
+              - source_matchers: ['severity = "warning"']
+                target_matchers: ['severity = "info"']
+                equal: ["namespace", "alertname"]
+              - source_matchers: ['alertname = "InfoInhibitor"']
+                target_matchers: ['severity = "info"']
+                equal: ["namespace"]
+              - target_matchers: ['alertname = "InfoInhibitor"']
+              # 같은 시나리오(같은 런북) 안에서 critical이 울리면 warning 억제
+              #   예: BookingQueueWaitHigh(critical) → BookingBacklogGrowing(warning)
+              #   scenario 라벨 없는 알림끼리는 비교하지 않음 (빈 값끼리 같다고 판단되는 것 방지)
+              - source_matchers: ['team = "team5"', 'severity = "critical"', 'scenario =~ ".+"']
+                target_matchers: ['team = "team5"', 'severity = "warning"', 'scenario =~ ".+"']
+                equal: ["scenario"]
+              # 같은 SLI(좌석 선점 지연): fast burn(critical)이 울리면 p99 임계·slow burn 억제
+              - source_matchers: ['alertname = "SeatHoldLatencyFastBurn"']
+                target_matchers: ['alertname =~ "SeatHoldLatencyHigh|SeatHoldLatencySlowBurn"']
+                equal: ["team"]
+              # 같은 원인(KEDA external metrics API): Down이 울리면 Errors 억제
+              - source_matchers: ['alertname = "KubeAggregatedAPIDown"']
+                target_matchers: ['alertname = "KubeAggregatedAPIErrors"']
+                equal: ["name"]
+              # 하지 않은 것: 원인 알림(DbConnectionPending 등)으로 다른 시나리오 증상 억제
+              #   시나리오 1(Worker 지연)에서도 ticket-service DbConnectionPending이 함께 울림 → 진짜 장애를 가릴 위험
             receivers:
               - name: "null"
               - name: slack-default
                 slack_configs:
                   - api_url_file: /etc/alertmanager/secrets/alertmanager-slack/webhook-url
                     send_resolved: true
-                    title: '[DEV][{{ .Status | toUpper }}] {{ .CommonLabels.alertname }}'
-                    text: |-
-                      {{ range .Alerts }}*{{ .Annotations.summary }}*
-                      {{ .Annotations.description }}
-                      {{ if .Annotations.impact }}• 영향: {{ .Annotations.impact }}
-                      {{ end }}{{ if .Labels.category }}• 구분: {{ .Labels.category }}{{ if .Labels.scenario }} / {{ .Labels.scenario }}{{ end }}
-                      {{ end }}{{ if .Annotations.runbook_url }}• 런북: {{ .Annotations.runbook_url }}
-                      {{ end }}{{ if .Annotations.dashboard }}• 대시보드: {{ .Annotations.dashboard }}
-                      {{ end }}{{ if .Annotations.logql }}• 로그: `{{ .Annotations.logql }}`
-                      {{ end }}
-                      {{ end }}
+                    title: '{{ template "team5.title" . }}'
+                    text: '{{ template "team5.text" . }}'
               - name: slack-critical
                 slack_configs:
                   - api_url_file: /etc/alertmanager/secrets/alertmanager-slack/webhook-url-critical
                     send_resolved: true
-                    title: '[DEV][{{ .Status | toUpper }}] {{ .CommonLabels.alertname }}'
-                    text: |-
-                      {{ range .Alerts }}*{{ .Annotations.summary }}*
-                      {{ .Annotations.description }}
-                      {{ if .Annotations.impact }}• 영향: {{ .Annotations.impact }}
-                      {{ end }}{{ if .Labels.category }}• 구분: {{ .Labels.category }}{{ if .Labels.scenario }} / {{ .Labels.scenario }}{{ end }}
-                      {{ end }}{{ if .Annotations.runbook_url }}• 런북: {{ .Annotations.runbook_url }}
-                      {{ end }}{{ if .Annotations.dashboard }}• 대시보드: {{ .Annotations.dashboard }}
-                      {{ end }}{{ if .Annotations.logql }}• 로그: `{{ .Annotations.logql }}`
-                      {{ end }}
-                      {{ end }}
+                    title: '{{ template "team5.title" . }}'
+                    text: '{{ template "team5.text" . }}'
 
   destination:
     server: https://kubernetes.default.svc
